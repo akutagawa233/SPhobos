@@ -33,7 +33,7 @@ public:
 		, Board_Offset { { 0, 0 } }
 		, Bar_Offset { { 0, 0 } }
 		, Sections_DrawBackwards { false }
-		, Sections_Pips_File { FileSystem::PIPS_SHP() }
+		, Sections_Pips_File { FileSystem::PIPS_SHP }
 		, Sections_Pips { { 16, 17, 18 } }
 		, Sections_EmptyPip { -1 }
 		, Sections_Amount { 17 }
