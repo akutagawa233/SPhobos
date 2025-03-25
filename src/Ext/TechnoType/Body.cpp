@@ -862,6 +862,9 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->IgnoredByMouse_ToAlly.Read(exINI, pSection, "IgnoredByMouse.ToAlly");
 	this->IgnoredByMouse_ToEnemy.Read(exINI, pSection, "IgnoredByMouse.ToEnemy");
 
+	this->HealthBar_BarType.Read(exINI, pSection, "HealthBar.BarType");
+	this->ShieldBar_BarType.Read(exINI, pSection, "ShieldBar.BarType");
+
 	// Ares 0.2
 	this->RadarJamRadius.Read(exINI, pSection, "RadarJamRadius");
 	this->Cloneable.Read(exINI, pSection, "Cloneable");
@@ -1460,6 +1463,9 @@ void TechnoTypeExt::ExtData::Serialize(T& Stm)
 
 		.Process(this->ProneSpeed)
 
+
+		.Process(this->HealthBar_BarType)
+		.Process(this->ShieldBar_BarType)
 		;
 }
 void TechnoTypeExt::ExtData::LoadFromStream(PhobosStreamReader& Stm)

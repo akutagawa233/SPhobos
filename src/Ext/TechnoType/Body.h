@@ -12,6 +12,7 @@
 #include <New/Type/Affiliated/PassengerDeletionTypeClass.h>
 #include <New/Type/DigitalDisplayTypeClass.h>
 #include <New/Type/Affiliated/DroppodTypeClass.h>
+#include <New/Type/BarTypeClass.h>
 
 class Matrix3D;
 
@@ -422,6 +423,9 @@ public:
 
 		Nullable<double> ProneSpeed;
 
+		Nullable<BarTypeClass*> HealthBar_BarType;
+		Nullable<BarTypeClass*> ShieldBar_BarType;
+
 		struct LaserTrailDataEntry
 		{
 			ValueableIdx<LaserTrailTypeClass> idxType;
@@ -800,53 +804,8 @@ public:
 			, Wake_Grapple { }
 			, Wake_Sinking { }
 
-			, AttackMove_Aggressive {}
-			, AttackMove_UpdateTarget {}
-
-			, BunkerableAnyway { false }
-			, KeepTargetOnMove { false }
-			, KeepTargetOnMove_ExtraDistance { Leptons(0) }
-
-			, Power { }
-
-			, ExtraTurretCount { 0 }
-			, ExtraTurretOffsets { }
-			, BurstPerTurret { 0 }
-
-      		, Image_ConditionYellow { }
-			, Image_ConditionRed { }
-			, WaterImage_ConditionYellow { }
-			, WaterImage_ConditionRed { }
-
-			, InitialSpawnsNumber { }
-			, Spawns_Queue { }
-
-			, RadarInvisible_ToSelf { false }
-			, RadarInvisible_ToAlly { false }
-
-			, DefaultVisualCharacter { 0 }
-			, DefaultVisualCharacterToSelf { }
-			, DefaultVisualCharacterToAlly { }
-			, DefaultVisualCharacterToEnemy { }
-
-			, IgnoredByMouse { false }
-			, IgnoredByMouse_ToSelf { }
-			, IgnoredByMouse_ToAlly { }
-			, IgnoredByMouse_ToEnemy { }
-
-			, Cloneable { true }
-			, ClonedAt { }
-			, ClonedAs { }
-
-			, Spawner_RecycleRange { Leptons(-1) }
-			, Spawner_RecycleAnim { }
-			, Spawner_RecycleCoord { {0,0,0} }
-			, Spawner_RecycleOnTurret { false }
-
-			, VehicleDamagedSpeedMultiplier_Yellow { }
-			, VehicleDamagedSpeedMultiplier_Red { }
-
-			, ProneSpeed { }
+			, HealthBar_BarType { }
+			, ShieldBar_BarType { }
 		{ }
 
 		virtual ~ExtData() = default;
