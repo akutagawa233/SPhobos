@@ -336,9 +336,11 @@ bool PhobosTrajectory::OnVelocityCheck()
 	{
 		// When in high speed, it's necessary to check each cell on the path that the next frame will pass through
 		const bool subjectToGround = this->GetCanHitGround();
-		const bool subjectToWalls = pBullet->Type->SubjectToWalls;
-		const bool subjectToFirestorm = !pBullet->Type->IgnoresFirestorm;
-		const bool checkCoords = checkThrough || subjectToGround || subjectToWalls;
+		const auto pBulletType = pBullet->Type;
+		const auto pBulletTypeExt = BulletTypeExt::ExtMap.Find(pBulletType);
+		const bool subjectToWCS = pBulletType->SubjectToWalls || pBulletType->SubjectToCliffs || pBulletTypeExt->SubjectToSolid;
+		const bool subjectToFirestorm = !pBulletType->IgnoresFirestorm;
+		const bool checkCoords = subjectToGround || checkThrough || subjectToWCS;
 		// If no inspection is needed, just skip it
 		if (checkCoords || subjectToFirestorm)
 		{
@@ -351,8 +353,12 @@ bool PhobosTrajectory::OnVelocityCheck()
 			// Skip when no inspection is needed
 			if (checkCoords)
 			{
-				const auto sourceCell = CellClass::Coord2Cell(theSourceCoords);
-				const auto targetCell = CellClass::Coord2Cell(theTargetCoords);
+				const auto pSourceCell = MapClass::Instance.GetCellAt(theSourceCoords);
+				const auto sourceCell = pSourceCell->MapCoords;
+				const auto pTargetCell = MapClass::Instance.GetCellAt(theTargetCoords);
+				const auto targetCell = pTargetCell->MapCoords;
+				auto pLastCell = MapClass::Instance.GetCellAt(pBullet->LastMapCoords);
+				const bool checkLevel = !pBulletTypeExt->SubjectToLand.isset() && !pBulletTypeExt->SubjectToWater.isset();
 				const auto cellDist = sourceCell - targetCell;
 				const auto cellPace = CellStruct { static_cast<short>(std::abs(cellDist.X)), static_cast<short>(std::abs(cellDist.Y)) };
 				// Take big steps as much as possible to reduce check times, just ensure that each cell is inspected
@@ -364,10 +370,12 @@ bool PhobosTrajectory::OnVelocityCheck()
 				for (size_t i = 0; i < largePace; ++i)
 				{
 					if ((subjectToGround && (curCoord.Z + 16) < MapClass::Instance.GetCellFloorHeight(curCoord)) // Below ground level? (16 ->error range)
-						|| (subjectToWalls && pCurCell->OverlayTypeIndex != -1 && OverlayTypeClass::Array.GetItem(pCurCell->OverlayTypeIndex)->Wall
-						&& (!RulesClass::Instance->AlliedWallTransparency || !pOwner->IsAlliedWith(HouseClass::Array.Items[pCurCell->WallOwnerIndex]))
-						&& (pCurCell->Level * Unsorted::LevelHeight + Unsorted::CellHeight > curCoord.Z)) // Impact on the wall?
-						|| (checkThrough && this->CheckThroughAndSubjectInCell(pCurCell, pOwner))) // Blocked by obstacles?
+						|| (checkThrough && this->CheckThroughAndSubjectInCell(pCurCell, pOwner)) // Blocked by obstacles?
+						|| (subjectToWCS && TrajectoryHelper::GetObstacle(pSourceCell, pTargetCell, pLastCell, curCoord, pBulletType, pOwner)) // Impact on the wall/cliff/solid?
+						|| (checkLevel ? (pBulletType->Level && pCurCell->IsOnFloor()) // Level or above land/water?
+							: ((pCurCell->LandType == LandType::Water || pCurCell->LandType == LandType::Beach)
+								? (pBulletTypeExt->SubjectToWater.Get(false) && pBulletTypeExt->SubjectToWater_Detonate)
+								: (pBulletTypeExt->SubjectToLand.Get(false) && pBulletTypeExt->SubjectToLand_Detonate))))
 					{
 						locationDistance = PhobosTrajectory::Get2DDistance(curCoord, theSourceCoords);
 						velocityCheck = true;
@@ -375,6 +383,7 @@ bool PhobosTrajectory::OnVelocityCheck()
 					}
 					// There are no obstacles, continue to check the next cell
 					curCoord += stepCoord;
+					pLastCell = pCurCell;
 					pCurCell = MapClass::Instance.GetCellAt(curCoord);
 				}
 			}
@@ -518,59 +527,66 @@ void PhobosTrajectory::MultiplyBulletVelocity(const double ratio, const bool sho
 /*!
 	Rotate one vector by a certain angle towards the direction of another vector.
 
-	\param from Vector that needs to be rotated. It doesn't need to be a standardized vector.
-	\param to The final direction vector that needs to be oriented. It doesn't need to be a standardized vector.
+	\param vector Vector that needs to be rotated. This function directly modifies this value.
+	\param aim The final direction vector that needs to be oriented. It doesn't need to be a standardized vector.
 	\param turningRadian The maximum radius that can rotate. Note that it must be a positive number.
 
-	\returns The calculation result of the new vector.
+	\returns No return value, result is vector.
 
 	\author CrimRecya
 */
-BulletVelocity PhobosTrajectory::RotateVector(const BulletVelocity& from, const BulletVelocity& to, double turningRadian)
+void PhobosTrajectory::RotateVector(BulletVelocity& vector, const BulletVelocity& aim, double turningRadian)
 {
-	// Try using the vector to calculate the included angle
-	const auto dotProduct = (to * from);
-	const auto baseFactor = sqrt(to.MagnitudeSquared() * from.MagnitudeSquared());
+	const auto baseFactor = sqrt(aim.MagnitudeSquared() * vector.MagnitudeSquared());
 	// Not valid vector
 	if (baseFactor <= 1e-10)
-		return to;
+	{
+		vector = aim;
+		return;
+	}
+	// Try using the vector to calculate the included angle
+	const auto dotProduct = (aim * vector);
 	// Calculate the cosine of the angle when the conditions are suitable
 	const auto cosTheta = dotProduct / baseFactor;
 	// Ensure that the result range of cos is correct
 	const auto radian = Math::acos(Math::clamp(cosTheta, -1.0, 1.0));
 	// When the angle is small, aim directly at the target
 	if (std::abs(radian) <= turningRadian)
-		return to;
+	{
+		vector = aim;
+		return;
+	}
 	// Calculate the rotation axis
-	auto rotationAxis = to.CrossProduct(from);
+	auto rotationAxis = aim.CrossProduct(vector);
 	// The radian can rotate, input the correct direction
 	const auto rotateRadian = (radian < 0 ? turningRadian : -turningRadian);
 	// Substitute to calculate new velocity
-	return PhobosTrajectory::RotateAboutTheAxis(from, rotationAxis, rotateRadian);
+	PhobosTrajectory::RotateAboutTheAxis(vector, rotationAxis, rotateRadian);
 }
 
 /*!
 	Rotate the vector around the axis of rotation by a fixed angle.
 
-	\param vector Vector that needs to be rotated. It doesn't need to be a standardized vector.
+	\param vector Vector that needs to be rotated. This function directly modifies this value.
 	\param axis The vector of rotation axis. This operation will standardize it.
 	\param radian The angle of rotation, positive or negative determines its direction of rotation.
 
-	\returns The calculation result of the new vector.
+	\returns No return value, result is vector.
 
 	\author CrimRecya
 */
-BulletVelocity PhobosTrajectory::RotateAboutTheAxis(const BulletVelocity& vector, BulletVelocity& axis, double radian)
+void PhobosTrajectory::RotateAboutTheAxis(BulletVelocity& vector, BulletVelocity& axis, double radian)
 {
 	const auto axisLengthSquared = axis.MagnitudeSquared();
 	// Zero axis vector is not acceptable
 	if (axisLengthSquared < 1e-10)
-		return vector;
-	// Rotate around the axis of rotation
+		return;
+	// Standardize rotation axis
 	axis *= 1 / sqrt(axisLengthSquared);
+	// Rotate around the axis of rotation
 	const auto cosRotate = Math::cos(radian);
 	// Substitute the formula to calculate the new vector
-	return ((vector * cosRotate) + (axis * ((1 - cosRotate) * (vector * axis))) + (axis.CrossProduct(vector) * Math::sin(radian)));
+	vector = (vector * cosRotate) + (axis * ((1 - cosRotate) * (vector * axis))) + (axis.CrossProduct(vector) * Math::sin(radian));
 }
 
 // Inspection of projectile orientation
@@ -662,7 +678,7 @@ void PhobosTrajectory::OnFacingUpdate()
 			desiredFacing.Z = 0;
 		}
 		// Calculate specifically only when the ROT is reasonable
-		pBullet->Velocity = PhobosTrajectory::RotateVector(pBullet->Velocity, desiredFacing, (pType->BulletROT * ratio));
+		PhobosTrajectory::RotateVector(pBullet->Velocity, desiredFacing, (pType->BulletROT * ratio));
 		// Standardizing
 		pBullet->Velocity *= (1 / pBullet->Velocity.Magnitude());
 	}
@@ -711,7 +727,7 @@ void PhobosTrajectory::DetonateOnObstacle()
 	else
 		this->ShouldDetonate = true;
 	// Need to cause additional damage?
-	if (!this->ProximityImpact || !this->GetType()->ProximityWarhead)
+	if (!this->ProximityImpact)
 		return;
 	// Detonate extra warhead
 	const auto pFirer = pBullet->Owner;
@@ -737,7 +753,8 @@ bool PhobosTrajectory::CheckSynchronize()
 		if (pTarget && (pTarget->IsInAir() != this->TargetInTheAir))
 			pTarget = nullptr;
 		// Replace with a new target
-		this->SetBulletNewTarget(pTarget);
+		if (pTarget)
+			this->SetBulletNewTarget(pTarget);
 	}
 
 	return false;
@@ -792,13 +809,13 @@ void PhobosTrajectoryType::Read(CCINIClass* const pINI, const char* pSection)
 	this->RecordSourceCoord.Read(exINI, pSection, "Trajectory.RecordSourceCoord");
 
 	this->PassDetonate.Read(exINI, pSection, "Trajectory.PassDetonate");
+	this->PassDetonateLocal.Read(exINI, pSection, "Trajectory.PassDetonateLocal");
 	this->PassDetonateWarhead.Read<true>(exINI, pSection, "Trajectory.PassDetonateWarhead");
 	this->PassDetonateDamage.Read(exINI, pSection, "Trajectory.PassDetonateDamage");
 	this->PassDetonateDelay.Read(exINI, pSection, "Trajectory.PassDetonateDelay");
 	this->PassDetonateDelay = Math::max(1, this->PassDetonateDelay);
 	this->PassDetonateInitialDelay.Read(exINI, pSection, "Trajectory.PassDetonateInitialDelay");
 	this->PassDetonateInitialDelay = Math::max(0, this->PassDetonateInitialDelay);
-	this->PassDetonateLocal.Read(exINI, pSection, "Trajectory.PassDetonateLocal");
 	this->ProximityImpact.Read(exINI, pSection, "Trajectory.ProximityImpact");
 	this->ProximityWarhead.Read<true>(exINI, pSection, "Trajectory.ProximityWarhead");
 	this->ProximityDamage.Read(exINI, pSection, "Trajectory.ProximityDamage");
@@ -865,13 +882,14 @@ void PhobosTrajectoryType::Serialize(T& Stm)
 		.Process(this->ApplyRangeModifiers)
 		.Process(this->UseDisperseCoord)
 		.Process(this->RecordSourceCoord)
+		.Process(this->Ranged)
 
 		.Process(this->PassDetonate)
+		.Process(this->PassDetonateLocal)
 		.Process(this->PassDetonateWarhead)
 		.Process(this->PassDetonateDamage)
 		.Process(this->PassDetonateDelay)
 		.Process(this->PassDetonateInitialDelay)
-		.Process(this->PassDetonateLocal)
 		.Process(this->ProximityImpact)
 		.Process(this->ProximityWarhead)
 		.Process(this->ProximityDamage)

@@ -129,7 +129,13 @@ void MissileTrajectory::OnUnlimbo()
 bool MissileTrajectory::OnEarlyUpdate()
 {
 	// No need to wait for the calculation of lead time
-	return this->PhobosTrajectory::OnEarlyUpdate();
+	if (this->PhobosTrajectory::OnEarlyUpdate())
+		return true;
+	// Restore ProjectileRange
+	if (!this->Type->UniqueCurve)
+		this->CheckProjectileRange();
+	// Waiting for new location calculated
+	return false;
 }
 
 bool MissileTrajectory::OnVelocityCheck()
@@ -509,7 +515,7 @@ bool MissileTrajectory::ChangeBulletVelocity(const CoordStruct& targetLocation)
 		// Calculate the rotation axis
 		auto rotationAxis = targetVelocity.CrossProduct(bulletVelocity);
 		// Substitute to calculate new velocity
-		bulletVelocity = PhobosTrajectory::RotateAboutTheAxis(bulletVelocity, rotationAxis, (radian < 0 ? turningRadius : -turningRadius));
+		PhobosTrajectory::RotateAboutTheAxis(bulletVelocity, rotationAxis, (radian < 0 ? turningRadius : -turningRadius));
 		// Check if the steering ability is insufficient
 		if (!pType->UniqueCurve && pType->SuicideShortOfROT && dotProduct <= 0 && (this->InStraight || this->LastDotProduct > 0))
 			return true;

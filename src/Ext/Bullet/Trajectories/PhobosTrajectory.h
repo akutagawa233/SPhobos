@@ -56,13 +56,14 @@ public:
 		, ApplyRangeModifiers { false }
 		, UseDisperseCoord { false }
 		, RecordSourceCoord { false }
+		, Ranged { false }
 
 		, PassDetonate { false }
+		, PassDetonateLocal { false }
 		, PassDetonateWarhead {}
 		, PassDetonateDamage {}
 		, PassDetonateDelay { 1 }
 		, PassDetonateInitialDelay { 0 }
-		, PassDetonateLocal { false }
 		, ProximityImpact { 0 }
 		, ProximityWarhead {}
 		, ProximityDamage {}
@@ -111,13 +112,14 @@ public:
 	Valueable<bool> ApplyRangeModifiers; // Apply range bonus
 	Valueable<bool> UseDisperseCoord; // Use the recorded launch location
 	Valueable<bool> RecordSourceCoord; // Record the launch location
+	bool Ranged; // Auto set
 
 	Valueable<bool> PassDetonate; // Detonate the warhead while moving
+	Valueable<bool> PassDetonateLocal; // Detonate at ground level
 	Valueable<WarheadTypeClass*> PassDetonateWarhead; // The pass warhead used
 	Nullable<int> PassDetonateDamage; // The damage caused by the pass warhead
 	Valueable<int> PassDetonateDelay; // Detonation interval
 	Valueable<int> PassDetonateInitialDelay; // Detonation initial delay
-	Valueable<bool> PassDetonateLocal; // Detonate at ground level
 	Valueable<int> ProximityImpact; // How many times can proximity warhead be triggered
 	Valueable<WarheadTypeClass*> ProximityWarhead; // The proximity warhead used
 	Nullable<int> ProximityDamage; // The damage caused by the proximity warhead
@@ -322,8 +324,8 @@ public:
 		return pFirer;
 	}
 	static std::vector<CellStruct> GetCellsInRectangle(const CellStruct bottomStaCell, const CellStruct leftMidCell, const CellStruct rightMidCell, const CellStruct topEndCell);
-	static BulletVelocity RotateVector(const BulletVelocity& from, const BulletVelocity& to, double turningRadian);
-	static BulletVelocity RotateAboutTheAxis(const BulletVelocity& vector, BulletVelocity& axis, double radian);
+	static void RotateVector(BulletVelocity& vector, const BulletVelocity& aim, double turningRadian);
+	static void RotateAboutTheAxis(BulletVelocity& vector, BulletVelocity& axis, double radian);
 
 	bool OnFacingCheck();
 	void OnFacingUpdate();

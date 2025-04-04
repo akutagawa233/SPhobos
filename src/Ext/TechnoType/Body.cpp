@@ -565,6 +565,7 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->VoicePickup.Read(exINI, pSection, "VoicePickup");
 
 	this->CameoPriority.Read(exINI, pSection, "CameoPriority");
+	this->CameoPriority_Houses = pINI->ReadHouseTypesList(pSection, "CameoPriority.Houses", this->CameoPriority_Houses);
 
 	this->WarpOut.Read(exINI, pSection, "WarpOut");
 	this->WarpIn.Read(exINI, pSection, "WarpIn");
@@ -735,7 +736,10 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->SelectedInfo_Button.Read(exINI, pSection, "SelectedInfo.Button");
 	this->UIDescription_HoveredInfo.Read(exINI, pSection, "UIDescription.HoveredInfo");
 
-	this->FakeOf.Read(exINI, pSection, "FakeOf");
+	this->AmphibiousEnter.Read(exINI, pSection, "AmphibiousEnter");
+	this->AmphibiousUnload.Read(exINI, pSection, "AmphibiousUnload");
+	this->NoQueueUpToEnter.Read(exINI, pSection, "NoQueueUpToEnter");
+	this->NoQueueUpToUnload.Read(exINI, pSection, "NoQueueUpToUnload");
 
 	this->RateDown_Delay.Read(exINI, pSection, "RateDown.Delay");
 	this->RateDown_Reset.Read(exINI, pSection, "RateDown.Reset");
@@ -743,9 +747,6 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->RateDown_Cover_AmmoBelow.Read(exINI, pSection, "RateDown.Cover.AmmoBelow");
 
 	this->UniqueTechno.Read(exINI, pSection, "UniqueTechno");
-
-	this->NoQueueUpToEnter.Read(exINI, pSection, "NoQueueUpToEnter");
-	this->NoQueueUpToUnload.Read(exINI, pSection, "NoQueueUpToUnload");
 
 	this->CanManualReload.Read(exINI, pSection, "CanManualReload");
 	this->CanManualReload_ResetROF.Read(exINI, pSection, "CanManualReload.ResetROF");
@@ -814,10 +815,6 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 
 	this->IgnoreRallyPoint.Read(exINI, pSection, "IgnoreRallyPoint");
 
-	this->Sinkable.Read(exINI, pSection, "Sinkable");
-	this->SinkableBySquid.Read(exINI, pSection, "SinkableBySquid");
-	this->SinkSpeed.Read(exINI, pSection, "SinkSpeed");
-
 	this->JumpjetSpeedType.Read(exINI, pSection, "JumpjetSpeedType");
 
 	this->FallingDownDamage.Read(exINI, pSection, "FallingDownDamage");
@@ -865,6 +862,10 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->HealthBar_BarType.Read(exINI, pSection, "HealthBar.BarType");
 	this->ShieldBar_BarType.Read(exINI, pSection, "ShieldBar.BarType");
 
+	this->Sinkable.Read(exINI, pSection, "Sinkable");
+	this->Sinkable_SquidGrab.Read(exINI, pSection, "Sinkable.SquidGrab");
+	this->SinkSpeed.Read(exINI, pSection, "SinkSpeed");
+
 	// Ares 0.2
 	this->RadarJamRadius.Read(exINI, pSection, "RadarJamRadius");
 	this->Cloneable.Read(exINI, pSection, "Cloneable");
@@ -881,6 +882,10 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	// Ares 0.C
 	this->NoAmmoWeapon.Read(exINI, pSection, "NoAmmoWeapon");
 	this->NoAmmoAmount.Read(exINI, pSection, "NoAmmoAmount");
+
+	// Ares 2.0
+	this->Passengers_BySize.Read(exINI, pSection, "Passengers.BySize");
+	this->FakeOf.Read(exINI, pSection, "FakeOf");
 
 	// Ares 3.0
 	this->KeepAlive.Read(exINI, pSection, "KeepAlive");
@@ -916,10 +921,6 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	// Art tags
 	INI_EX exArtINI(CCINIClass::INI_Art);
 	auto pArtSection = pThis->ImageFile;
-
-	this->CameoPCX.Read(&CCINIClass::INI_Art, pArtSection, "CameoPCX");
-	this->GreyCameoPCX.Read(&CCINIClass::INI_Art, pArtSection, "GreyCameoPCX");
-	this->CameoPal.LoadFromINI(&CCINIClass::INI_Art, pArtSection, "CameoPalette");
 
 	this->TurretOffset.Read(exArtINI, pArtSection, "TurretOffset");
 	this->TurretShadow.Read(exArtINI, pArtSection, "TurretShadow");
@@ -1053,6 +1054,14 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 
 	if (GeneralUtils::IsValidString(pThis->PaletteFile) && !pThis->Palette)
 		Debug::Log("[Developer warning] [%s] has Palette=%s set but no palette file was loaded (missing file or wrong filename). Missing palettes cause issues with lighting recalculations.\n", pArtSection, pThis->PaletteFile);
+
+	this->GreyCameoPCX.Read(&CCINIClass::INI_Art, pArtSection, "GreyCameoPCX");
+
+	// Ares 0.1
+	this->CameoPal.LoadFromINI(&CCINIClass::INI_Art, pArtSection, "CameoPalette");
+
+	// Ares 0.2
+	this->CameoPCX.Read(&CCINIClass::INI_Art, pArtSection, "CameoPCX");
 }
 
 template <typename T>
@@ -1085,6 +1094,7 @@ void TechnoTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->ImmuneToCrit)
 		.Process(this->MultiMindControl_ReleaseVictim)
 		.Process(this->CameoPriority)
+		.Process(this->CameoPriority_Houses)
 		.Process(this->NoManualMove)
 		.Process(this->NoManualEject)
 		.Process(this->InitialStrength)
@@ -1323,15 +1333,18 @@ void TechnoTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->FakeOf)
 		.Process(this->CameoPal)
 
+		.Process(this->AmphibiousEnter)
+		.Process(this->AmphibiousUnload)
+		.Process(this->NoQueueUpToEnter)
+		.Process(this->NoQueueUpToUnload)
+		.Process(this->Passengers_BySize)
+
 		.Process(this->RateDown_Delay)
 		.Process(this->RateDown_Reset)
 		.Process(this->RateDown_Cover_Value)
 		.Process(this->RateDown_Cover_AmmoBelow)
 
 		.Process(this->UniqueTechno)
-
-		.Process(this->NoQueueUpToEnter)
-		.Process(this->NoQueueUpToUnload)
 
 		.Process(this->CanManualReload)
 		.Process(this->CanManualReload_ResetROF)
@@ -1400,10 +1413,6 @@ void TechnoTypeExt::ExtData::Serialize(T& Stm)
 
 		.Process(this->IgnoreRallyPoint)
 
-		.Process(this->Sinkable)
-		.Process(this->SinkableBySquid)
-		.Process(this->SinkSpeed)
-
 		.Process(this->JumpjetSpeedType)
 
 		.Process(this->KeepAlive)
@@ -1436,6 +1445,11 @@ void TechnoTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->InitialSpawnsNumber)
 		.Process(this->Spawns_Queue)
 
+		.Process(this->Spawner_RecycleRange)
+		.Process(this->Spawner_RecycleAnim)
+		.Process(this->Spawner_RecycleCoord)
+		.Process(this->Spawner_RecycleOnTurret)
+
 		.Process(this->RadarInvisible_ToSelf)
 		.Process(this->RadarInvisible_ToAlly)
 
@@ -1453,11 +1467,6 @@ void TechnoTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->ClonedAt)
 		.Process(this->ClonedAs)
 
-		.Process(this->Spawner_RecycleRange)
-		.Process(this->Spawner_RecycleAnim)
-		.Process(this->Spawner_RecycleCoord)
-		.Process(this->Spawner_RecycleOnTurret)
-
 		.Process(this->VehicleDamagedSpeedMultiplier_Yellow)
 		.Process(this->VehicleDamagedSpeedMultiplier_Red)
 
@@ -1466,6 +1475,9 @@ void TechnoTypeExt::ExtData::Serialize(T& Stm)
 
 		.Process(this->HealthBar_BarType)
 		.Process(this->ShieldBar_BarType)
+		.Process(this->Sinkable)
+		.Process(this->Sinkable_SquidGrab)
+		.Process(this->SinkSpeed)
 		;
 }
 void TechnoTypeExt::ExtData::LoadFromStream(PhobosStreamReader& Stm)

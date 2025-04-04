@@ -42,11 +42,58 @@ DEFINE_HOOK(0x4692BD, BulletClass_Logics_ApplyMindControl, 0x6)
 
 DEFINE_HOOK(0x469A75, BulletClass_Logics_DamageHouse, 0x7)
 {
+	enum { SkipDamageArea = 0x469A88 };
+
 	GET(BulletClass*, pThis, ESI);
 	GET(HouseClass*, pHouse, ECX);
+	GET(int, damage, EDX);
+	GET_BASE(CoordStruct*, coord, 0x8);
 
 	if (!pHouse)
-		R->ECX(BulletExt::ExtMap.Find(pThis)->FirerHouse);
+	{
+		pHouse = BulletExt::ExtMap.Find(pThis)->FirerHouse;
+		R->ECX(pHouse);
+	}
+
+	const auto pWH = pThis->WH;
+	const auto pWHExt = WarheadTypeExt::ExtMap.Find(pWH);
+
+	if (pWHExt->NoCellSpread && damage)
+	{
+		DamageAreaResult result = DamageAreaResult::Missed;
+
+		if (const auto pObject = abstract_cast<ObjectClass*>(pThis->Target))
+		{
+			auto dist = coord->DistanceFrom(pObject->GetCoords());
+			const auto isBuilding = pObject->WhatAmI() == AbstractType::Building;
+
+			if (isBuilding)
+			{
+				const auto pBuildingType = static_cast<BuildingClass*>(pObject)->Type;
+				dist -= ((pBuildingType->GetFoundationHeight(false) + pBuildingType->GetFoundationWidth()) << 6);
+			}
+
+			if (dist <= pWHExt->NoCellSpread_SnapDistance.Get())
+			{
+				if (!(pObject->AbstractFlags & AbstractFlags::Techno))
+				{
+					result = DamageAreaResult::Hit;
+					pObject->ReceiveDamage(&damage, 0, pWH, pThis->Owner, false, false, pHouse);
+				}
+				else if (pObject->IsAlive && pObject->Health > 0 && pObject->IsOnMap && !pObject->InLimbo
+					&& (!isBuilding || !static_cast<BuildingClass*>(pObject)->Type->InvisibleInGame)
+					&& !(pObject == pThis->Owner && pObject->GetTechnoType()->DamageSelf && pWH != RulesClass::Instance->CrushWarhead))
+				{
+					result = (pObject->IsIronCurtained() && !static_cast<TechnoClass*>(pObject)->ForceShielded)
+						? DamageAreaResult::Nullified : DamageAreaResult::Hit;
+					pObject->ReceiveDamage(&damage, 0, pWH, pThis->Owner, false, false, pHouse);
+				}
+			}
+		}
+
+		R->EAX(result);
+		return SkipDamageArea;
+	}
 
 	return 0;
 }

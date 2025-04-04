@@ -169,6 +169,10 @@ void RulesExt::ExtData::LoadBeforeTypeData(RulesClass* pThis, CCINIClass* pINI)
 	this->ProgressDisplay_Others_PipsShape.Read(exINI, GameStrings::AudioVisual, "ProgressDisplay.Others.PipsShape");
 	this->ProgressDisplay_Buildings_PipsShape.Read(exINI, GameStrings::AudioVisual, "ProgressDisplay.Buildings.PipsShape");
 	this->ExtendedAircraftMissions.Read(exINI, GameStrings::General, "ExtendedAircraftMissions");
+	this->AmphibiousEnter.Read(exINI, GameStrings::General, "AmphibiousEnter");
+	this->AmphibiousUnload.Read(exINI, GameStrings::General, "AmphibiousUnload");
+	this->NoQueueUpToEnter.Read(exINI, GameStrings::General, "NoQueueUpToEnter");
+	this->NoQueueUpToUnload.Read(exINI, GameStrings::General, "NoQueueUpToUnload");
 	this->CheckExtraBaseNormal.Read(exINI, GameStrings::General, "CheckExtraBaseNormal");
 	this->Cameo_AlwaysExist.Read(exINI, GameStrings::AudioVisual, "Cameo.AlwaysExist");
 	this->Cameo_OverlayShapes.Read(exINI, GameStrings::AudioVisual, "Cameo.OverlayShapes");
@@ -176,6 +180,7 @@ void RulesExt::ExtData::LoadBeforeTypeData(RulesClass* pThis, CCINIClass* pINI)
 	this->Cameo_OverlayPalette.LoadFromINI(pINI, GameStrings::AudioVisual, "Cameo.OverlayPalette");
 	this->ExtendedBuildingPlacing.Read(exINI, GameStrings::General, "ExtendedBuildingPlacing");
 	this->AutoBuilding.Read(exINI, GameStrings::General, "AutoBuilding");
+
 	this->BuildingProductionQueue.Read(exINI, GameStrings::General, "BuildingProductionQueue");
 	this->PlacementGrid_Expand.Read(exINI, GameStrings::AudioVisual, "PlacementGrid.Expand");
 	this->PlacementGrid_LandFrames.Read(exINI, GameStrings::AudioVisual, "PlacementGrid.LandFrames");
@@ -189,8 +194,6 @@ void RulesExt::ExtData::LoadBeforeTypeData(RulesClass* pThis, CCINIClass* pINI)
 	this->AIBiasSpawnCell.Read(exINI, GameStrings::AI, "AIBiasSpawnCell");
 	this->AIForbidConYard.Read(exINI, GameStrings::AI, "AIForbidConYard");
 	this->CleanUpAirBarrier.Read(exINI, GameStrings::General, "CleanUpAirBarrier");
-	this->NoQueueUpToEnter.Read(exINI, GameStrings::General, "NoQueueUpToEnter");
-	this->NoQueueUpToUnload.Read(exINI, GameStrings::General, "NoQueueUpToUnload");
 	this->AttackMove_Aggressive.Read(exINI, GameStrings::General, "AttackMove.Aggressive");
 	this->AttackMove_UpdateTarget.Read(exINI, GameStrings::General, "AttackMove.UpdateTarget");
 	this->ExtendedScatterAction.Read(exINI, GameStrings::General, "ExtendedScatterAction");
@@ -347,6 +350,9 @@ void RulesExt::ExtData::LoadBeforeTypeData(RulesClass* pThis, CCINIClass* pINI)
 
 	this->BuildingTypeSelectable.Read(exINI, GameStrings::General, "BuildingTypeSelectable");
 
+	this->Airstrike_TargetCell.Read(exINI, GameStrings::General, "Airstrike.TargetCell");
+	this->Airstrike_SecondaryFirst.Read(exINI, GameStrings::General, "Airstrike.SecondaryFirst");
+
 	this->VehicleDamagedSpeedMultiplier_Yellow.Read(exINI, GameStrings::General, "VehicleDamagedSpeedMultiplier.Yellow");
 	this->VehicleDamagedSpeedMultiplier_Red.Read(exINI, GameStrings::General, "VehicleDamagedSpeedMultiplier.Red");
 
@@ -364,6 +370,24 @@ void RulesExt::ExtData::LoadBeforeTypeData(RulesClass* pThis, CCINIClass* pINI)
 	this->UpdateInLimbo_LimboLaunch.Read(exINI, GameStrings::General, "UpdateInLimbo.Parasite");
 
 	this->InvisoLatencyFix.Read(exINI, GameStrings::General, "InvisoLatencyFix");
+
+	this->UnifiedRadarColor.Read(exINI, GameStrings::AudioVisual, "UnifiedRadarColor");
+	this->UnifiedRadarColor_Land.Read(exINI, GameStrings::AudioVisual, "UnifiedRadarColor.Land");
+	this->UnifiedRadarColor_Water.Read(exINI, GameStrings::AudioVisual, "UnifiedRadarColor.Water");
+	this->UnifiedRadarColor_Cliff.Read(exINI, GameStrings::AudioVisual, "UnifiedRadarColor.Cliff");
+	// Unified techno color
+	this->UnifiedRadarColor_Self.Read(exINI, GameStrings::AudioVisual, "UnifiedRadarColor.Self");
+	this->UnifiedRadarColor_Ally.Read(exINI, GameStrings::AudioVisual, "UnifiedRadarColor.Ally");
+	this->UnifiedRadarColor_Enemy.Read(exINI, GameStrings::AudioVisual, "UnifiedRadarColor.Enemy");
+	this->UnifiedRadarColor_Neutral.Read(exINI, GameStrings::AudioVisual, "UnifiedRadarColor.Neutral");
+	pINI->ReadString(GameStrings::AudioVisual, "UnifiedTechnoColor.SelfColor", "Green", Phobos::readBuffer);
+	this->UnifiedTechnoColor_SelfColorIdx = ColorScheme::FindIndex(Phobos::readBuffer);
+	pINI->ReadString(GameStrings::AudioVisual, "UnifiedTechnoColor.AllyColor", "Gold", Phobos::readBuffer);
+	this->UnifiedTechnoColor_AllyColorIdx = ColorScheme::FindIndex(Phobos::readBuffer);
+	pINI->ReadString(GameStrings::AudioVisual, "UnifiedTechnoColor.EnemyColor", "Red", Phobos::readBuffer);
+	this->UnifiedTechnoColor_EnemyColorIdx = ColorScheme::FindIndex(Phobos::readBuffer);
+	pINI->ReadString(GameStrings::AudioVisual, "UnifiedTechnoColor.NeutralColor", "LightGrey", Phobos::readBuffer);
+	this->UnifiedTechnoColor_NeutralColorIdx = ColorScheme::FindIndex(Phobos::readBuffer);
 
 	// Section AITargetTypes
 	int itemsCount = pINI->GetKeyCount("AITargetTypes");
@@ -515,6 +539,10 @@ void RulesExt::ExtData::Serialize(T& Stm)
 		.Process(this->ProgressDisplay_Others_PipsShape)
 		.Process(this->ProgressDisplay_Buildings_PipsShape)
 		.Process(this->ExtendedAircraftMissions)
+		.Process(this->AmphibiousEnter)
+		.Process(this->AmphibiousUnload)
+		.Process(this->NoQueueUpToEnter)
+		.Process(this->NoQueueUpToUnload)
 		.Process(this->CheckExtraBaseNormal)
 		.Process(this->Cameo_AlwaysExist)
 		.Process(this->Cameo_OverlayShapes)
@@ -535,8 +563,6 @@ void RulesExt::ExtData::Serialize(T& Stm)
 		.Process(this->AIBiasSpawnCell)
 		.Process(this->AIForbidConYard)
 		.Process(this->CleanUpAirBarrier)
-		.Process(this->NoQueueUpToEnter)
-		.Process(this->NoQueueUpToUnload)
 		.Process(this->AttackMove_Aggressive)
 		.Process(this->AttackMove_UpdateTarget)
 		.Process(this->ExtendedScatterAction)
@@ -670,6 +696,8 @@ void RulesExt::ExtData::Serialize(T& Stm)
 		.Process(this->CombatLightDetailLevel)
 		.Process(this->LightFlashAlphaImageDetailLevel)
 		.Process(this->BuildingTypeSelectable)
+		.Process(this->Airstrike_TargetCell)
+		.Process(this->Airstrike_SecondaryFirst)
 		.Process(this->VehicleDamagedSpeedMultiplier_Yellow)
 		.Process(this->VehicleDamagedSpeedMultiplier_Red)
 		.Process(this->ProneSpeed)
@@ -683,6 +711,18 @@ void RulesExt::ExtData::Serialize(T& Stm)
 		.Process(this->UpdateInLimbo_NormalPassenger)
 		.Process(this->UpdateInLimbo_LimboLaunch)
 		.Process(this->InvisoLatencyFix)
+		.Process(this->UnifiedRadarColor)
+		.Process(this->UnifiedRadarColor_Land)
+		.Process(this->UnifiedRadarColor_Water)
+		.Process(this->UnifiedRadarColor_Cliff)
+		.Process(this->UnifiedRadarColor_Self)
+		.Process(this->UnifiedRadarColor_Ally)
+		.Process(this->UnifiedRadarColor_Enemy)
+		.Process(this->UnifiedRadarColor_Neutral)
+		.Process(this->UnifiedTechnoColor_SelfColorIdx)
+		.Process(this->UnifiedTechnoColor_AllyColorIdx)
+		.Process(this->UnifiedTechnoColor_EnemyColorIdx)
+		.Process(this->UnifiedTechnoColor_NeutralColorIdx)
 		;
 }
 

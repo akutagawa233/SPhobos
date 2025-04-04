@@ -870,6 +870,7 @@ Trajectory.AllowFirerTurning=true     ; boolean
 | `BallisticScatter` | ⚪ | ⚪ | ⚪ | · | ⚪ | · |
 | `Gravity` | · | ⚪ | ⚪ | · | ⚪ | · |
 | `SubjectToGround` | ⚪ | ⚪ | · | · | · | · |
+| `ProjectileRange(Weapon's)` | ⚪ | ⚪ | ⚪ | · | ⚪ | · |
 | `Trajectory.Speed` | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
 | `Trajectory.Duration` | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
 | `Trajectory.TolerantTime` | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ | ⚪ |
@@ -895,6 +896,7 @@ Trajectory.AllowFirerTurning=true     ; boolean
 
 ```{note}
 - `SubjectToGround` can cause the projectile with `Trajectory=Straight` during the entire process or the projectile with `Trajectory=Bombard` during the ascent phase to detonate prematurely due to impact with the ground.
+- Setting `Trajectory.Missile.UniqueCurve` will ignore all of these settings.
 ```
 
 - In addition, these types of projectile also have some general functions for detonating warheads. Effective for all types.
@@ -912,8 +914,8 @@ Trajectory.AllowFirerTurning=true     ; boolean
     - `Trajectory.ProximityMedial` controls whether to detonate `Trajectory.ProximityWarhead` at the bullet's location rather than the proximity target's location. If `Trajectory.ProximityDirect` is set to true, this will only affect the calculation result of `Trajectory.DamageEdgeAttenuation`.
     - `Trajectory.ProximityAllies` controls whether allies will also trigger the proximity fuse.
     - `Trajectory.ProximityFlight` controls whether to count units in the air.
-  - `Trajectory.ThroughVehicles` controls whether the projectile will not be obstructed by vehicles or aircrafts on the ground. When it is obstructed, it will be directly detonated at its location. If it still have `Trajectory.ProximityImpact` times, it will also detonate a `Trajectory.ProximityImpact` at the location of the obstacle.
-  - `Trajectory.ThroughBuilding` controls whether the projectile will not be obstructed by buildings. When it is obstructed, it will be directly detonated at its location. If it still have `Trajectory.ProximityImpact` times, it will also detonate a `Trajectory.ProximityImpact` at the location of the obstacle.
+  - `Trajectory.ThroughVehicles` controls whether the projectile will not be obstructed by vehicles or aircrafts on the ground. When it is obstructed, it will be directly detonated at its location. If it still have `Trajectory.ProximityImpact` times, it will also detonate a `Trajectory.ProximityImpact` at the location of the obstacle. Before the projectile being blocked, `Trajectory.ProximityImpact` will also not cause damage to vehicles or aircrafts.
+  - `Trajectory.ThroughBuilding` controls whether the projectile will not be obstructed by buildings. When it is obstructed, it will be directly detonated at its location. If it still have `Trajectory.ProximityImpact` times, it will also detonate a `Trajectory.ProximityImpact` at the location of the obstacle. Before the projectile being blocked, `Trajectory.ProximityImpact` will also not cause damage to buildings.
   - `Trajectory.DamageEdgeAttenuation` controls the edge attenuation ratio of projectile damage (includes all types of the trajectory's damage), that is, the actual damage caused will be this value multiplied by the ratio of the current distance to the weapon's range. Can NOT be set to a negative integer.
   - `Trajectory.DamageCountAttenuation` controls the attenuation coefficient of projectile damage (includes all types of the trajectory's damage), that is, how many times the next damage after each bounce is the damage just caused. Can NOT be set to a negative integer.
 
@@ -945,6 +947,12 @@ Trajectory.DamageCountAttenuation=1.0  ; floating point value
 - Make sure you set a low `Trajectory.ProximityRadius` value unless necessary.
 ```
 
+```{hint}
+- `SubjectToBuildings` and `Trajectory.ThroughBuilding` are different. But the two are not in conflict and can take effect simultaneously. The former can affect the search for enemies and ignore the main target, follows the settings of Ares and will only self destruct when conditions are met. While the latter will self destruct when touching only non-allies building (including main target) and trigger its effect if `Trajectory.ProximityImpact` is set.
+- Simply put, `Trajectory.PassDetonate` is periodically effect and `Trajectory.ProximityImpact` is once per person effect.
+- If `Trajectory.ProximityImpact` is set to non-zero, the default value of `Trajectory.PeacefulVanish` will be changed.
+```
+
 - Of course, there are also some general functions for launching weapons. Effective for all types too.
   - `Trajectory.DisperseWeapons` defines the dispersal weapons of the projectile.
   - `Trajectory.DisperseBursts` defines how many corresponding weapons each time the projectile will fire. When the quantity is lower than `Trajectory.DisperseWeapons`, the last value in the list will be used.
@@ -963,7 +971,7 @@ Trajectory.DamageCountAttenuation=1.0  ; floating point value
   - `Trajectory.DisperseSuicide` controls whether the projectile will self destruct after the number of times it spreads the weapon has been exhausted.
   - `Trajectory.DisperseFromFirer` controls whether the weapons will be fired by the firer towards the projectile. Otherwise, the tracing weapons will be fired from the projectile towards the target. Using different default values, when `Trajectory=Engrave` or `Trajectory=Tracing`, the default is true, while others are false.
   - `Trajectory.DisperseFaceCheck` controls whether the projectile will check its orientation before firing the weapons. Ignore this if `Trajectory.BulletFacing=Velocity` or `Trajectory.BulletFacing=Spin`.
-  - `Trajectory.DisperseForceFire` controls whether still fire disperse weapon when there is no target or the target is beyond the weapon's range.
+  - `Trajectory.DisperseForceFire` controls whether still fire disperse weapon when the projectile itself has no target or the target is beyond the weapon's range.
   - `Trajectory.DisperseCoord` controls the FLH where the projectile fires the weapon when set `Trajectory.DisperseFromFirer` to false.
 
 In `rulesmd.ini`:
@@ -994,7 +1002,11 @@ Trajectory.DisperseCoord=0,0,0       ; integer - Forward,Lateral,Height
 - The listed Weapons in `Trajectory.DisperseWeapons` must be listed in `[WeaponTypes]` for them to work.
 - If you set `Trajectory.DisperseRetarget=true`, also make sure you set `Trajectory.DisperseWeapons` a low `Range` value unless necessary.
 - `Trajectory.DisperseWeapons` now not support `Arcing=true` projectiles and customized `Bolt.ColorN`.
+```
+
+```{hint}
 - Although `Trajectory.DisperseDoRepeat=false` will disable duplicate target selection, if the weapon is able to attack the ground, it may still attack duplicate targets by locking onto the cell where the target is located.
+- If `Trajectory.DisperseCycle` is set to non-zero, the default value of `Trajectory.PeacefulVanish` will be changed.
 ```
 
 #### Straight trajectory
@@ -1114,7 +1126,11 @@ Trajectory.Engrave.UpdateDirection=false   ; boolean
 
 ```{note}
 - It's best not to let it be intercepted.
-- Directly using the laser drawing in `Trajectory=Engrave` with `Trajectory.PassDetonateWarhead` is more cost-effective than using `Trajectory.DisperseWeapons`. Please consider using it at your own discretion.
+```
+
+```{hint}
+- Directly using the laser drawing in `Trajectory=Engrave` with `Trajectory.PassDetonateWarhead` is more cost-effective than using `Trajectory.DisperseWeapons`. If you need the laser to be blocked by the Fire Storm Wall, you can try using the latter.
+- The default value of `Trajectory.PeacefulVanish` will be changed when using this type of trajectory.
 ```
 
 #### Parabola trajectory
@@ -1150,9 +1166,12 @@ Trajectory.Parabola.BounceCoefficient=0.8  ; floating point value
 ```
 
 ```{note}
+- If `Trajectory.Parabola.OpenFireMode=Angle`, the performance consumption is high, and may have no solution. It is not recommended to enable `SubjectToCliffs` or enable `AA` with a smaller `MinimumRange` when using this mode.
+```
+
+```{hint}
 - Compared to vanilla `Arcing`, this can also be used for aircrafts and airburst weapon.
 - Be aware that `Trajectory.DetonationDistance` do not conflict with `Trajectory.Parabola.BounceTimes` and will take effect simultaneously. So if you want to explode the bullet only after the times of bounces is exhausted, you should set `Trajectory.DetonationDistance` to a non positive value.
-- If `Trajectory.Parabola.OpenFireMode=Angle`, the performance consumption is high, and may have no solution. It is not recommended to enable `SubjectToCliffs` or enable `AA` with a smaller `MinimumRange` when using this mode.
 ```
 
 #### Tracing trajectory
@@ -1183,7 +1202,7 @@ Trajectory.Tracing.ChasableDistance=0    ; floating point value
 
 ### Projectiles blocked by land or water
 
-- It is now possible to make projectiles consider either land or water as obstacles that block their path by setting `SubjectToLand/Water` to true, respectively. Weapons firing such projectiles will consider targets blocked by such obstacles as out of range and will attempt to reposition themselves so they can fire without being blocked by the said obstacles before firing and if `SubjectToLand/Water.Detonate` is set to true, the projectiles will detonate if they somehow manage to collide with the said obstacles.
+- It is now possible to make projectiles consider either land or water as obstacles that block their path by setting `SubjectTo(Land/Water)` to true, respectively. Weapons firing such projectiles will consider targets blocked by such obstacles as out of range and will attempt to reposition themselves so they can fire without being blocked by the said obstacles before firing and if `SubjectTo(Land/Water).Detonate` is set to true, the projectiles will detonate if they somehow manage to collide with the said obstacles.
   - `Level=true` projectiles detonate on tiles belonging to non-water tilesets by default, but will not consider such tiles as true obstacles. This behaviour can be overridden by setting these keys.
 - As for `SubjectToGround`, if set it to true ,it will predict the height of the connecting straight line from the bullet's source coordinates to target coordinates. If the predicted height is lower than the ground height of the current predicted position, the firer will also consider targets blocked by such obstacles as out of range and will attempt to reposition themselves. Due to technical reasons, this feature will not be effective for the Air Force and buildings. Technos attacking in `OpenTopped=true` vehicles will not be affected either.
 
@@ -2074,6 +2093,36 @@ Turret.BodyOrientationAngle=0         ; floating point value
 Turret.BodyOrientationSymmetric=true  ; boolean
 ```
 
+### Fast access vehicle
+
+- Now you can let infantry or vehicle passengers quickly enter or leave the transport vehicles without queuing. Defaults to `[General]->NoQueueUpToEnter` or `[General]->NoQueueUpToUnload`.
+
+In `rulesmd.ini`:
+```ini
+[General]
+NoQueueUpToEnter=false    ; boolean
+NoQueueUpToUnload=false   ; boolean
+
+[SOMEVEHICLE]             ; VehicleType
+NoQueueUpToEnter=         ; boolean
+NoQueueUpToUnload=        ; boolean
+```
+
+### Amphibious access vehicle
+
+- Now you can let amphibious infantry or vehicle passengers enter or leave amphibious transport vehicles on water surface. Defaults to `[General]->AmphibiousEnter` or `[General]->AmphibiousUnload`.
+
+In `rulesmd.ini`:
+```ini
+[General]
+AmphibiousEnter=false    ; boolean
+AmphibiousUnload=false   ; boolean
+
+[SOMEVEHICLE]            ; VehicleType
+AmphibiousEnter=         ; boolean
+AmphibiousUnload=        ; boolean
+```
+
 ## Terrain
 
 ### Destroy animation & sound
@@ -2572,6 +2621,7 @@ CylinderRangefinding=             ; boolean
   - `Strafing.Shots` controls the number of times the weapon is fired during a single strafe run, defaults to 5 if not set. `Ammo` is only deducted at the end of the strafe run, regardless of the number of shots fired.
   - `Strafing.SimulateBurst` controls whether or not the shots fired during strafing simulate behavior of `Burst`, allowing for alternating firing offset. Only takes effect if weapon has `Burst` set to 1 or undefined.
   - `Strafing.UseAmmoPerShot`, if set to `true` overrides the usual behaviour of only deducting ammo after a strafing run and instead doing it after each individual shot.
+  - `Strafing.EndDelay` can be used to override the delay after firing last shot in strafing run before aircraft resumes another strafing run or returns to base. Defaults to (Weapon `Range` * 256 + 1024) / Aircraft `Speed`. Note that using a short delay with aircraft that can do multiple strafing runs with their ammo can cause undesired behaviour like dancing around or facing weird way depending on other factors like ROF and/or movement speed.
 - There is a special case for aircraft spawned by `Type=SpyPlane` superweapons on `SpyPlane Approach` or `SpyPlane Overfly` mission where `Strafing.Shots` only if explicitly set on its primary weapon, determines the maximum number of times the map revealing effect can activate irregardless of other factors.
 
 In `rulesmd.ini`:
@@ -2581,6 +2631,7 @@ Strafing=                      ; boolean
 Strafing.Shots=                ; integer
 Strafing.SimulateBurst=false   ; boolean
 Strafing.UseAmmoPerShot=false  ; boolean
+Strafing.EndDelay=             ; integer, game frames
 ```
 
 ### Weapon targeting filter
@@ -2610,4 +2661,8 @@ VisualScatter.Max=0.13  ; floating point value, distance in cells
 
 [SOMEWEAPON]            ; WeaponType
 VisualScatter=false     ; boolean
+```
+
+```{note}
+This function is only used as an additional scattering visual display, which is different from `BallisticScatter` and can be used simultaneously, without affecting the actual explosion position of the projectile.
 ```

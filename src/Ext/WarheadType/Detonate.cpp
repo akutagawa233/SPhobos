@@ -244,7 +244,10 @@ void WarheadTypeExt::ExtData::ApplyBuildingUndeploy(TechnoClass* pTarget)
 	if (this->BuildingSell)
 	{
 		if ((pBuilding->CanBeSold() && !pBuilding->IsStrange()) || this->BuildingSell_IgnoreUnsellable)
+		{
+			pBuilding->SetArchiveTarget(nullptr); // Reset to ensure it must to be sold
 			pBuilding->Sell(1);
+		}
 
 		return;
 	}
@@ -567,12 +570,10 @@ void WarheadTypeExt::ExtData::InterceptBullets(TechnoClass* pOwner, WeaponTypeCl
 
 void WarheadTypeExt::ExtData::ApplyConvert(HouseClass* pHouse, TechnoClass* pTarget)
 {
-	auto pTargetFoot = abstract_cast<FootClass*>(pTarget);
-
-	if (!pTargetFoot || this->Convert_Pairs.size() == 0)
+	if (this->Convert_Pairs.size() == 0)
 		return;
 
-	TypeConvertGroup::Convert(pTargetFoot, this->Convert_Pairs, pHouse);
+	TypeConvertGroup::Convert(pTarget, this->Convert_Pairs, pHouse);
 }
 
 void WarheadTypeExt::ExtData::ApplyLocomotorInfliction(TechnoClass* pTarget)

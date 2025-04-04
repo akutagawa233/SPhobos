@@ -362,229 +362,7 @@ DEFINE_HOOK(0x55B4E1, LogicClass_Update_UnmarkCellOccupationFlags, 0x5)
 
 #pragma endregion
 
-#pragma region NoQueueUpToEnterAndUnload
-
-bool __fastcall CanEnterNow(UnitClass* pTransport, FootClass* pPassenger)
-{
-	const auto pOwner = pTransport->Owner;
-
-	if (!pOwner || !pOwner->IsAlliedWith(pPassenger) || pTransport->IsBeingWarpedOut())
-		return false;
-
-	if (pPassenger->IsMindControlled() || pPassenger->ParasiteEatingMe)
-		return false;
-
-	const auto pManager = pPassenger->CaptureManager;
-
-	if (pManager && pManager->IsControllingSomething())
-		return false;
-
-	const auto passengerSize = pPassenger->GetTechnoType()->Size;
-	const auto pTransportType = pTransport->Type;
-
-	if (passengerSize > pTransportType->SizeLimit)
-		return false;
-
-	const auto maxSize = pTransportType->Passengers;
-	const auto predictSize = pTransport->Passengers.GetTotalSize() + static_cast<int>(passengerSize);
-	const auto pLink = pTransport->GetNthLink();
-	const auto needCalculate = pLink && pLink != pPassenger;
-
-	if (needCalculate)
-	{
-		const auto linkCell = pLink->GetCoords();
-		const auto tranCell = pTransport->GetCoords();
-
-		// When the most important passenger is close, need to prevent overlap
-		if (abs(linkCell.X - tranCell.X) <= 384 && abs(linkCell.Y - tranCell.Y) <= 384)
-			return (predictSize <= (maxSize - pLink->GetTechnoType()->Size));
-	}
-
-	const auto remain = maxSize - predictSize;
-
-	if (remain < 0)
-		return false;
-
-	if (needCalculate && remain < static_cast<int>(pLink->GetTechnoType()->Size))
-	{
-		// Avoid passenger moving forward, resulting in overlap with transport and create invisible barrier
-		pLink->SendToFirstLink(RadioCommand::NotifyUnlink);
-		pLink->EnterIdleMode(false, true);
-	}
-
-	return true;
-}
-
-DEFINE_HOOK(0x51A0D4, InfantryClass_UpdatePosition_NoQueueUpToEnter, 0x6)
-{
-	enum { EnteredThenReturn = 0x51A47E };
-
-	GET(InfantryClass* const, pThis, ESI);
-
-	if (const auto pDest = abstract_cast<UnitClass*>(pThis->CurrentMission == Mission::Enter ? pThis->Destination : pThis->QueueUpToEnter))
-	{
-		if (pDest->Type->Passengers > 0 && TechnoTypeExt::ExtMap.Find(pDest->Type)->NoQueueUpToEnter.Get(RulesExt::Global()->NoQueueUpToEnter))
-		{
-			const auto thisCell = pThis->GetCoords();
-			const auto destCell = pDest->GetCoords();
-
-			if (abs(thisCell.X - destCell.X) <= 384 && abs(thisCell.Y - destCell.Y) <= 384)
-			{
-				if (CanEnterNow(pDest, pThis)) // Replace send radio command: QueryCanEnter
-				{
-					if (const auto pTag = pDest->AttachedTag)
-						pTag->RaiseEvent(TriggerEvent::EnteredBy, pThis, CellStruct::Empty);
-
-					pThis->ArchiveTarget = nullptr;
-					pThis->OnBridge = false;
-					pThis->MissionAccumulateTime = 0;
-					pThis->GattlingValue = 0;
-					pThis->CurrentGattlingStage = 0;
-
-					if (const auto pMind = pThis->MindControlledBy)
-					{
-						if (const auto pManager = pMind->CaptureManager)
-							pManager->FreeUnit(pThis);
-					}
-
-					pThis->Limbo();
-
-					if (pDest->Type->OpenTopped)
-						pDest->EnteredOpenTopped(pThis);
-
-					pThis->Transporter = pDest;
-					pDest->AddPassenger(pThis);
-					pThis->Undiscover();
-
-					// Added, to prevent passengers from wanting to get on after getting off
-					pThis->QueueUpToEnter = nullptr;
-
-					// Added, to stop the passengers and let OpenTopped work normally
-					pThis->SetSpeedPercentage(0.0);
-
-					// Added, to stop hover unit's meaningless behavior
-					if (const auto pHover = locomotion_cast<HoverLocomotionClass*>(pThis->Locomotor))
-						pHover->MaxSpeed = 0;
-
-					return EnteredThenReturn;
-				}
-			}
-		}
-	}
-
-	return 0;
-}
-
-DEFINE_HOOK(0x73A5EA, UnitClass_UpdatePosition_NoQueueUpToEnter, 0x5)
-{
-	enum { EnteredThenReturn = 0x73A78C };
-
-	GET(UnitClass* const, pThis, EBP);
-
-	if (const auto pDest = abstract_cast<UnitClass*>(pThis->CurrentMission == Mission::Enter ? pThis->Destination : pThis->QueueUpToEnter))
-	{
-		if (pDest->Type->Passengers > 0 && TechnoTypeExt::ExtMap.Find(pDest->Type)->NoQueueUpToEnter.Get(RulesExt::Global()->NoQueueUpToEnter))
-		{
-			const auto thisCell = pThis->GetCoords();
-			const auto destCell = pDest->GetCoords();
-
-			if (abs(thisCell.X - destCell.X) <= 384 && abs(thisCell.Y - destCell.Y) <= 384)
-			{
-				if (CanEnterNow(pDest, pThis)) // Replace send radio command: QueryCanEnter
-				{
-					// I don't know why units have no trigger
-
-					pThis->ArchiveTarget = nullptr;
-					pThis->OnBridge = false;
-					pThis->MissionAccumulateTime = 0;
-					pThis->GattlingValue = 0;
-					pThis->CurrentGattlingStage = 0;
-
-					if (const auto pMind = pThis->MindControlledBy)
-					{
-						if (const auto pManager = pMind->CaptureManager)
-							pManager->FreeUnit(pThis);
-					}
-
-					pThis->Limbo();
-					pDest->AddPassenger(pThis);
-
-					if (pDest->Type->OpenTopped)
-						pDest->EnteredOpenTopped(pThis);
-
-					pThis->Transporter = pDest;
-
-					if (pThis->Type->OpenTopped)
-						pThis->SetTargetForPassengers(nullptr);
-
-					pThis->Undiscover();
-
-					// Added, to prevent passengers from wanting to get on after getting off
-					pThis->QueueUpToEnter = nullptr;
-
-					// Added, to stop the passengers and let OpenTopped work normally
-					pThis->SetSpeedPercentage(0.0);
-
-					// Added, to stop hover unit's meaningless behavior
-					if (const auto pHover = locomotion_cast<HoverLocomotionClass*>(pThis->Locomotor))
-						pHover->MaxSpeed = 0;
-
-					return EnteredThenReturn;
-				}
-			}
-		}
-	}
-
-	return 0;
-}
-
-static inline void PlayUnitLeaveTransportSound(UnitClass* pThis)
-{
-	const int sound = pThis->Type->LeaveTransportSound;
-
-	if (sound != -1)
-		VoxClass::PlayAtPos(sound, &pThis->Location);
-}
-
-DEFINE_HOOK(0x73DC9C, UnitClass_Mission_Unload_NoQueueUpToUnloadBreak, 0xA)
-{
-	enum { SkipGameCode = 0x73E289 };
-
-	GET(UnitClass* const, pThis, ESI);
-	GET(FootClass* const, pPassenger, EDI);
-
-	pPassenger->Undiscover();
-
-	// Play the sound when interrupted for some reason
-	if (TechnoTypeExt::ExtMap.Find(pThis->Type)->NoQueueUpToUnload.Get(RulesExt::Global()->NoQueueUpToUnload))
-		PlayUnitLeaveTransportSound(pThis);
-
-	return SkipGameCode;
-}
-
-DEFINE_HOOK(0x73DC1E, UnitClass_Mission_Unload_NoQueueUpToUnloadLoop, 0xA)
-{
-	enum { UnloadLoop = 0x73D8CB, UnloadReturn = 0x73E289 };
-
-	GET(UnitClass* const, pThis, ESI);
-
-	if (TechnoTypeExt::ExtMap.Find(pThis->Type)->NoQueueUpToUnload.Get(RulesExt::Global()->NoQueueUpToUnload))
-	{
-		if (pThis->Passengers.NumPassengers <= pThis->NonPassengerCount)
-		{
-			// If unloading is required within one frame, the sound will only be played when the last passenger leaves
-			PlayUnitLeaveTransportSound(pThis);
-			pThis->MissionStatus = 4;
-			return UnloadReturn;
-		}
-
-		R->EBX(0); // Reset
-		return UnloadLoop;
-	}
-
-	PlayUnitLeaveTransportSound(pThis);
-	return UnloadReturn;
-}
+#pragma region BuildingUnloadFix
 /*
 static inline bool CanBuildingUnloadOccupants(BuildingClass* pThis)
 {
@@ -615,46 +393,6 @@ DEFINE_HOOK(0x44733A, BuildingClass_MouseOverObject_BuildingCheckDeploy, 0xA)
 	return CanBuildingUnloadOccupants(pThis) ? OccupantsCanLeave : OccupantsCannotLeave;
 }
 */
-#pragma endregion
-
-#pragma region TechnoInRangeFix
-
-DEFINE_HOOK_AGAIN(0x4D6541, FootClass_ApproachTarget_InRangeSourceCoordsFix, 0x6)
-DEFINE_HOOK(0x4D621D, FootClass_ApproachTarget_InRangeSourceCoordsFix, 0x6)
-{
-	GET(FootClass*, pThis, EBX);
-	GET(WeaponTypeClass*, pWeapon, ECX);
-	REF_STACK(CoordStruct, sourceCoords, STACK_OFFSET(0x158, -0x12C));
-
-	bool cylinder = RulesExt::Global()->CylinderRangefinding;
-
-	if (auto const pWeaponExt = WeaponTypeExt::ExtMap.Find(pWeapon))
-		cylinder = pWeaponExt->CylinderRangefinding.Get(cylinder);
-
-	if (cylinder || pThis->IsInAir())
-	{
-		sourceCoords.Z = pThis->Target->GetCoords().Z;
-	}
-	else if (pWeapon && pWeapon->CellRangefinding)
-	{
-		const auto pCell = MapClass::Instance.GetCellAt(sourceCoords);
-		sourceCoords = pCell->GetCoords();
-
-		if (pCell->ContainsBridge())
-			sourceCoords.Z += CellClass::BridgeHeight;
-	}
-	else if (R->Origin() == 0x4D6541)
-	{
-		const auto pCell = MapClass::Instance.GetCellAt(sourceCoords);
-		sourceCoords.Z = pCell->GetFloorHeight(Point2D { sourceCoords.X, sourceCoords.Y });
-
-		if (pCell->ContainsBridge())
-			sourceCoords.Z += CellClass::BridgeHeight;
-	}
-
-	return 0;
-}
-
 #pragma endregion
 
 #pragma region DetectionLogic
@@ -704,6 +442,23 @@ DEFINE_HOOK(0x5865E2, MapClass_IsLocationFogged_Check, 0x5)
 
 // FindFactory -> Ares hooks all of these away
 // 0x5F7900
+
+#pragma endregion
+
+#pragma region SetHealthPercentageFix
+
+DEFINE_HOOK(0x5F5C80, ObjectClass_SetHealthPercentage_Round, 0xA)
+{
+	enum { SkipGameCode = 0x5F5CBA };
+
+	GET(ObjectClass* const, pThis, ECX);
+	GET_STACK(double, percentage, STACK_OFFSET(0x0, 0x4));
+
+	pThis->Health = (percentage <= 0.0) ? 0 : Math::max(1, Game::F2I(pThis->GetType()->Strength * percentage + 0.5));
+
+	R->EAX(0);
+	return SkipGameCode;
+}
 
 #pragma endregion
 
@@ -819,20 +574,14 @@ DEFINE_HOOK(0x6F9B64, TechnoClass_SelectAutoTarget_RecordAttackWall, 0x7)
 
 #pragma region CylinderRange
 
-DEFINE_HOOK(0x6F7891, TechnoClass_IsCloseEnough_CylinderRangefinding, 0x7)
+DEFINE_HOOK(0x6F755A, TechnoClass_IsCloseEnough_CylinderRangefinding, 0x7)
 {
-	enum { SkipGameCode = 0x6F789A };
-
-	GET(WeaponTypeClass* const, pWeaponType, EDI);
-	GET(TechnoClass* const, pThis, ESI);
-
-	bool cylinder = RulesExt::Global()->CylinderRangefinding;
-
-	if (auto const pWeaponExt = WeaponTypeExt::ExtMap.Find(pWeaponType))
-		cylinder = pWeaponExt->CylinderRangefinding.Get(cylinder);
-
-	R->AL(cylinder ? true : pThis->IsInAir());
-	return SkipGameCode;
+	GET_BASE(WeaponTypeClass* const, pWeaponType, 0x10);
+	GET(CoordStruct* const, pCoord, ESI);
+	GET(TechnoClass* const, pThis, EDI);
+	const bool cylinder = WeaponTypeExt::ExtMap.Find(pWeaponType)->CylinderRangefinding.Get(RulesExt::Global()->CylinderRangefinding.Get());
+	R->EAX(pCoord->X);
+	return (cylinder || pThis->WhatAmI() == AbstractType::Aircraft) ? 0x6F75B2 : 0x6F7568;
 }
 
 #pragma endregion
@@ -1539,75 +1288,17 @@ DEFINE_HOOK(0x741925, UnitClass_CrushCell_CrushBuilding, 0x5)
 
 #pragma endregion
 
-#pragma region Sink
-
-DEFINE_HOOK(0x7364DC, UnitClass_Update_SinkSpeed, 0x7)
-{
-	GET(UnitClass* const, pThis, ESI);
-	GET(int, coordZ, EDX);
-
-	R->EDX(coordZ - (TechnoTypeExt::ExtMap.Find(pThis->Type)->SinkSpeed - 5));
-	return 0;
-}
-
-DEFINE_HOOK(0x737DE2, UnitClass_ReceiveDamage_Sinkable, 0x6)
-{
-	enum { GoOtherChecks = 0x737E18, NoSink = 0x737E63 };
-
-	GET(UnitTypeClass*, pType, EAX);
-
-	const bool shouldSink = pType->Weight > RulesClass::Instance->ShipSinkingWeight && pType->Naval && !pType->Underwater && !pType->Organic;
-
-	return TechnoTypeExt::ExtMap.Find(pType)->Sinkable.Get(shouldSink) ? GoOtherChecks : NoSink;
-}
-
-DEFINE_HOOK(0x629C67, ParasiteClass_UpdateSquid_SinkableBySquid, 0x9)
-{
-	enum { SkipGameCode = 0x629C86 };
-
-	GET(ParasiteClass*, pThis, ESI);
-	GET(FootClass*, pVictim, EDI);
-
-	const auto pVictimType = pVictim->GetTechnoType();
-
-	if (TechnoTypeExt::ExtMap.Find(pVictimType)->SinkableBySquid || pVictim->WhatAmI() != AbstractType::Unit)
-	{
-		pVictim->IsSinking = true;
-		pVictim->Destroyed(pThis->Owner);
-		pVictim->Stun();
-	}
-	else
-	{
-		auto damage = pVictimType->Strength;
-		pVictim->ReceiveDamage(&damage, 0, RulesClass::Instance->C4Warhead, pThis->Owner, true, false, pThis->Owner->Owner);
-	}
-
-	return SkipGameCode;
-}
-
-#pragma endregion
-
 #pragma region JumpjetSpeedType
 
-namespace JumpjetSpeedType
+DEFINE_HOOK(0x54B36A, JumpjetLocomotionClass_MoveTo_JumpjetSpeedType, 0x5)
 {
-	int speedType;
-}
+	GET(ILocomotion* const, iloco, ESI);
+	REF_STACK(SpeedType, speedType, STACK_OFFSET(0x5C, -0x54));
 
-DEFINE_HOOK(0x54B255, JumpjetLocomotionClass_MoveTo_JumpjetSpeedType, 0x5)
-{
-	GET(ILocomotionPtr, pThis, ESI);
-
-	if (auto const pTypeExt = TechnoTypeExt::ExtMap.Find(locomotion_cast<JumpjetLocomotionClass*>(pThis)->LinkedTo->GetTechnoType()))
-		JumpjetSpeedType::speedType = pTypeExt->JumpjetSpeedType;
-
-	return 0;
-}
-
-DEFINE_HOOK(0x56DC20, MapClass_NearByLocation_JumpjetSpeedType, 0x6)
-{
-	if (*R->ESP<int*>() == 0x54B374) // Ret_in_JJLoco_MoveTo
-		R->Stack(STACK_OFFSET(0, 0xC), JumpjetSpeedType::speedType);
+	__assume(iloco != nullptr);
+	const auto pLoco = static_cast<JumpjetLocomotionClass*>(iloco);
+	const auto pTypeExt = TechnoTypeExt::ExtMap.Find(pLoco->LinkedTo->GetTechnoType());
+	speedType = static_cast<SpeedType>(pTypeExt->JumpjetSpeedType.Get());
 
 	return 0;
 }
@@ -1874,6 +1565,100 @@ DEFINE_HOOK(0x655DDD, RadarClass_ProcessPoint_RadarInvisible, 0x6)
 	return isInShrouded && !pTechnoOwner->IsControlledByCurrentPlayer() ? Invisible : GoOtherChecks;
 }
 
+DEFINE_HOOK(0x47C329, CellClass_GetRadarColor_UnifiedRadarColor, 0x7)
+{
+	REF_STACK(ColorStruct, rgb1, STACK_OFFSET(0x14, -0x8));
+	REF_STACK(ColorStruct, rgb2, STACK_OFFSET(0x14, -0xC));
+	GET(CellClass*, pThis, ESI);
+
+	const auto pRulesExt = RulesExt::Global();
+
+	if (!pRulesExt->UnifiedRadarColor)
+		return 0;
+
+	if (pThis->Tile_Is_Cliff())
+		rgb1 = pRulesExt->UnifiedRadarColor_Cliff;
+	else if (pThis->Tile_Is_Water())
+		rgb1 = pRulesExt->UnifiedRadarColor_Water;
+	else
+		rgb1 = pRulesExt->UnifiedRadarColor_Land;
+
+	rgb2 = rgb1;
+
+	return 0;
+}
+
+#pragma endregion
+
+#pragma region UnifiedTechnoColor
+
+DEFINE_HOOK(0x655F80, RadarClass_ProcessPoint_UnifiedRadarColor, 0x6)
+{
+	enum { SkipGameCode = 0x655FEB };
+
+	GET_STACK(HouseClass*, pOwner, STACK_OFFSET(0x40, 0x4));
+
+	if (!Phobos::Config::UnifiedTechnoColor)
+		return 0;
+
+	const auto pRulesExt = RulesExt::Global();
+	int colorCode = 0;
+
+	if (pOwner->Type->MultiplayPassive)
+		colorCode = Drawing::RGB_To_Int(pRulesExt->UnifiedRadarColor_Neutral);
+	else if (pOwner->IsControlledByCurrentPlayer())
+		colorCode = Drawing::RGB_To_Int(pRulesExt->UnifiedRadarColor_Self);
+	else if (HouseClass::CurrentPlayer->IsAlliedWith(pOwner))
+		colorCode = Drawing::RGB_To_Int(pRulesExt->UnifiedRadarColor_Ally);
+	else
+		colorCode = Drawing::RGB_To_Int(pRulesExt->UnifiedRadarColor_Enemy);
+
+	R->EBX(colorCode);
+	return SkipGameCode;
+}
+
+DEFINE_HOOK(0x705D88, TechnoClass_GetRemapColour_UnifiedColor, 0x8)
+{
+	enum { SkipGameCode = 0x705DF1 };
+
+	GET(TechnoClass*, pThis, ESI);
+	GET(DynamicVectorClass<ColorScheme*>*, pPalette, EAX);
+
+	if (!Phobos::Config::UnifiedTechnoColor)
+		return 0;
+
+	auto getOwner = [pThis]()
+	{
+		if (pThis->IsClearlyVisibleTo(HouseClass::CurrentPlayer))
+			return pThis->Owner;
+
+		if (const auto pDisguiseHouse = pThis->GetDisguiseHouse(true))
+			return pDisguiseHouse;
+
+		return pThis->Owner;
+	};
+	const auto pOwner = getOwner();
+
+	auto getSchemeIdx = [pOwner]()
+	{
+		const auto pRulesExt = RulesExt::Global();
+
+		if (pOwner->Type->MultiplayPassive)
+			return pRulesExt->UnifiedTechnoColor_NeutralColorIdx;
+		else if (pOwner->IsControlledByCurrentPlayer())
+			return pRulesExt->UnifiedTechnoColor_SelfColorIdx;
+		else if (HouseClass::CurrentPlayer->IsAlliedWith(pOwner))
+			return pRulesExt->UnifiedTechnoColor_AllyColorIdx;
+
+		return pRulesExt->UnifiedTechnoColor_EnemyColorIdx;
+	};
+	const int unifiedColorScheme = getSchemeIdx();
+	const int colorSchemeIdx = unifiedColorScheme != -1 ? unifiedColorScheme : pOwner->ColorSchemeIndex;
+
+	R->ECX(pPalette ? pPalette->Items[colorSchemeIdx] : ColorScheme::Array.Items[colorSchemeIdx]);
+	return SkipGameCode;
+}
+
 #pragma endregion
 
 #pragma region VisualCharacter
@@ -2027,15 +1812,25 @@ DEFINE_HOOK(0x4DFD92, FootClass_FindXXX_CheckValid, 0x8) // FindBattleBunker
 
 #pragma region HealingWeaponFix
 
-// Fix the hardcode of healing weapon can't acquire in air target.
-DEFINE_HOOK(0x6F9222, TechnoClass_SelectAutoTarget_HealingTargetAir, 0x6)
-{
-	GET(TechnoClass*, pThis, ESI);
-	return pThis->CombatDamage(-1) < 0 ? 0x6F922E : 0;
-}
-
 // Skip the hardcode of healing weapon auto target range.
-// DEFINE_JUMP(LJMP, 0x6F9024, 0x6F9042); // No, have troubles
+DEFINE_JUMP(LJMP, 0x6F9024, 0x6F9042);
+
+DEFINE_HOOK(0x6FA9D8, TechnoClass_Update_FixRepairWeapon, 0x6)
+{
+	enum { SkipGameCode = 0x6FAA6F };
+
+	GET(TechnoClass*, pThis, ESI);
+
+	if (pThis->Target && pThis->CombatDamage(-1) < 0)
+	{
+		if ((SessionClass::IsCampaign() ? pThis->Owner->IsControlledByCurrentPlayer() : pThis->Owner->IsHumanPlayer) && !pThis->Owner->IsAlliedWith(pThis->Target))
+			pThis->SetTarget(nullptr);
+		else if (pThis->CurrentMission == Mission::Guard && !pThis->IsCloseEnoughToAttack(pThis->Target))
+			pThis->SetTarget(nullptr);
+	}
+
+	return SkipGameCode;
+}
 
 DEFINE_HOOK(0x707ED0, TechnoClass_GetGuardRange_FixForIFV, 0x6)
 {
@@ -2289,14 +2084,19 @@ DEFINE_HOOK(0x709918, TechnoClass_TargetAndEstimateDamage_CheckTarget, 0x6)
 
 #pragma endregion
 
-#pragma region BombParachute
+#pragma region Airstrike
 
-DEFINE_HOOK(0x5F5A8C, ObjectClass_SpawnParachuted_BombParachute, 0x5)
+DEFINE_HOOK(0x6F3477, TechnoClass_SelectWeapon_AirstrikeHardCode, 0xA)
 {
-	GET(BulletClass*, pThis, ESI);
+	return RulesExt::Global()->Airstrike_SecondaryFirst ? 0 : 0x6F3528;
+}
 
-	if (const auto pAnimType = BulletTypeExt::ExtMap.Find(pThis->Type)->BombParachute.Get())
-		R->EDX(pAnimType);
+DEFINE_HOOK(0x41D90C, AirstrikeClass_StartNewMission_SpawnAirSupport, 0x7)
+{
+	GET(AbstractClass*, pTarget, ESI);
+
+	if (!RulesExt::Global()->Airstrike_TargetCell)
+		R->EAX(pTarget);
 
 	return 0;
 }

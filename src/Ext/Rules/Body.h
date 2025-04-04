@@ -121,6 +121,10 @@ public:
 		Valueable<SHPStruct*> ProgressDisplay_Others_PipsShape;
 		Valueable<SHPStruct*> ProgressDisplay_Buildings_PipsShape;
 		Valueable<bool> ExtendedAircraftMissions;
+		Valueable<bool> AmphibiousEnter;
+		Valueable<bool> AmphibiousUnload;
+		Valueable<bool> NoQueueUpToEnter;
+		Valueable<bool> NoQueueUpToUnload;
 		Valueable<bool> CheckExtraBaseNormal;
 		Valueable<bool> Cameo_AlwaysExist;
 		Valueable<SHPStruct*> Cameo_OverlayShapes;
@@ -128,6 +132,7 @@ public:
 		CustomPalette Cameo_OverlayPalette;
 		Valueable<bool> ExtendedBuildingPlacing;
 		Valueable<bool> AutoBuilding;
+
 		Valueable<bool> BuildingProductionQueue;
 		Valueable<bool> PlacementGrid_Expand;
 		Valueable<Vector3D<int>> PlacementGrid_LandFrames;
@@ -141,8 +146,6 @@ public:
 		Valueable<bool> AIBiasSpawnCell;
 		Valueable<bool> AIForbidConYard;
 		Valueable<int> CleanUpAirBarrier;
-		Valueable<bool> NoQueueUpToEnter;
-		Valueable<bool> NoQueueUpToUnload;
 		Valueable<bool> AttackMove_Aggressive;
 		Valueable<bool> AttackMove_UpdateTarget;
 		Valueable<bool> ExtendedScatterAction;
@@ -301,6 +304,9 @@ public:
 		Valueable<bool> BuildingWaypoints;
 		Valueable<bool> BuildingTypeSelectable;
 
+		Valueable<bool> Airstrike_TargetCell;
+		Valueable<bool> Airstrike_SecondaryFirst;
+
 		Valueable<double> VehicleDamagedSpeedMultiplier_Yellow;
 		Valueable<double> VehicleDamagedSpeedMultiplier_Red;
 
@@ -320,6 +326,19 @@ public:
 		Valueable<bool> UpdateInLimbo_LimboLaunch;
 
 		Valueable<bool> InvisoLatencyFix;
+
+		Valueable<bool> UnifiedRadarColor;
+		Valueable<ColorStruct> UnifiedRadarColor_Land;
+		Valueable<ColorStruct> UnifiedRadarColor_Water;
+		Valueable<ColorStruct> UnifiedRadarColor_Cliff;
+		Valueable<ColorStruct> UnifiedRadarColor_Self;
+		Valueable<ColorStruct> UnifiedRadarColor_Ally;
+		Valueable<ColorStruct> UnifiedRadarColor_Enemy;
+		Valueable<ColorStruct> UnifiedRadarColor_Neutral;
+		int UnifiedTechnoColor_SelfColorIdx;
+		int UnifiedTechnoColor_AllyColorIdx;
+		int UnifiedTechnoColor_EnemyColorIdx;
+		int UnifiedTechnoColor_NeutralColorIdx;
 
 		ExtData(RulesClass* OwnerObject) : Extension<RulesClass>(OwnerObject)
 			, Storage_TiberiumIndex { -1 }
@@ -408,6 +427,10 @@ public:
 			, ProgressDisplay_Others_PipsShape { FileSystem::PIPS_SHP }
 			, ProgressDisplay_Buildings_PipsShape { FileSystem::PIPS_SHP }
 			, ExtendedAircraftMissions { false }
+			, AmphibiousEnter { false }
+			, AmphibiousUnload { false }
+			, NoQueueUpToEnter { false }
+			, NoQueueUpToUnload { false }
 			, CheckExtraBaseNormal { false }
 			, Cameo_AlwaysExist { false }
 			, Cameo_OverlayShapes { FileSystem::PIPS_SHP }
@@ -415,6 +438,7 @@ public:
 			, Cameo_OverlayPalette {}
 			, ExtendedBuildingPlacing { false }
 			, AutoBuilding { false }
+
 			, BuildingProductionQueue { false }
 			, PlacementGrid_Expand { false }
 			, PlacementGrid_LandFrames { { 1, 0, 0 } }
@@ -428,8 +452,6 @@ public:
 			, SelectedAircraftMissingPCX {}
 			, SelectedBuildingMissingPCX {}
 			, CleanUpAirBarrier { 0 }
-			, NoQueueUpToEnter { false }
-			, NoQueueUpToUnload { false }
 			, AttackMove_Aggressive { false }
 			, AttackMove_UpdateTarget { false }
 			, ExtendedScatterAction { false }
@@ -568,6 +590,10 @@ public:
 			, LightFlashAlphaImageDetailLevel { 0 }
 			, BuildingWaypoints { false }
 			, BuildingTypeSelectable { false }
+
+			, Airstrike_TargetCell { true }
+			, Airstrike_SecondaryFirst { true }
+
 			, VehicleDamagedSpeedMultiplier_Yellow { 0.75 }
 			, VehicleDamagedSpeedMultiplier_Red { 0.75 }
 			, ProneSpeed { }
@@ -581,6 +607,18 @@ public:
 			, UpdateInLimbo_NormalPassenger { false }
 			, UpdateInLimbo_LimboLaunch { false }
 			, InvisoLatencyFix { false }
+			, UnifiedRadarColor { false }
+			, UnifiedRadarColor_Land { ColorStruct(255,127,0) }
+			, UnifiedRadarColor_Water { ColorStruct(95,127,207) }
+			, UnifiedRadarColor_Cliff { ColorStruct(63,63,63) }
+			, UnifiedRadarColor_Self { ColorStruct(0,255,0) }
+			, UnifiedRadarColor_Ally { ColorStruct(255,255,0) }
+			, UnifiedRadarColor_Enemy { ColorStruct(255,0,0) }
+			, UnifiedRadarColor_Neutral { ColorStruct(255,255,255) }
+			, UnifiedTechnoColor_SelfColorIdx { -1 }
+			, UnifiedTechnoColor_AllyColorIdx { -1 }
+			, UnifiedTechnoColor_EnemyColorIdx { -1 }
+			, UnifiedTechnoColor_NeutralColorIdx { -1 }
 		{ }
 
 		virtual ~ExtData() = default;

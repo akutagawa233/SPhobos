@@ -54,6 +54,7 @@ void BulletTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->AAOnly.Read(exINI, pSection, "AAOnly");
 	this->Arcing_AllowElevationInaccuracy.Read(exINI, pSection, "Arcing.AllowElevationInaccuracy");
 	this->ReturnWeapon.Read<true>(exINI, pSection, "ReturnWeapon");
+	this->SubjectToSolid.Read(exINI, pSection, "SubjectToBuildings");
 	this->SubjectToGround.Read(exINI, pSection, "SubjectToGround");
 
 	this->AU.Read(exINI, pSection, "AU");
@@ -130,7 +131,11 @@ void BulletTypeExt::ExtData::TrajectoryValidation() const
 			pThis->Arm = 0;
 
 		if (pThis->Ranged) // 0x467C1C
+		{
 			pThis->Ranged = false;
+			// To avoid inappropriate behavior, this will only apply to ProjectileRange
+			pTrajType->Ranged = true;
+		}
 
 		const auto flag = pTrajType->Flag();
 
@@ -166,6 +171,7 @@ void BulletTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->AAOnly)
 		.Process(this->Arcing_AllowElevationInaccuracy)
 		.Process(this->ReturnWeapon)
+		.Process(this->SubjectToSolid)
 		.Process(this->SubjectToGround)
 		.Process(this->AU)
 		.Process(this->BallisticScatter_IncreaseByRange)

@@ -30,6 +30,8 @@ public:
 		AttachEffectTechnoProperties AE;
 		bool SubterraneanHarvFreshFromFactory;
 		AbstractClass* SubterraneanHarvRallyDest;
+		TechnoTypeClass* PreviousType; // Type change registered in TechnoClass::AI on current frame and used in FootClass::AI on same frame and reset after.
+		std::vector<EBolt*> ElectricBolts; // EBolts are not serialized so do not serialize this either.
 		int AnimRefCount; // Used to keep track of how many times this techno is referenced in anims f.ex Invoker, ParentBuilding etc., for pointer invalidation.
 		bool ReceiveDamage;
 		bool LastKillWasTeamTarget;
@@ -96,6 +98,8 @@ public:
 			, AE {}
 			, SubterraneanHarvFreshFromFactory { false }
 			, SubterraneanHarvRallyDest { nullptr }
+			, PreviousType { nullptr }
+			, ElectricBolts {}
 			, AnimRefCount { 0 }
 			, ReceiveDamage { false }
 			, LastKillWasTeamTarget { false }
@@ -159,11 +163,15 @@ public:
 		void EatPassengers();
 		void UpdateShield();
 		void UpdateOnTunnelEnter();
+		void UpdateOnTunnelExit();
 		void ApplySpawnLimitRange();
-		void UpdateTypeData(TechnoTypeClass* currentType);
+		void UpdateTypeData(TechnoTypeClass* pCurrentType);
+		void UpdateTypeData_Foot();
 		void UpdateLaserTrails();
 		void UpdateAttachEffects();
 		void UpdateGattlingRateDownReset();
+		void UpdateKeepTargetOnMove();
+		void UpdateWarpInDelay();
 		void UpdateCumulativeAttachEffects(AttachEffectTypeClass* pAttachEffectType, AttachEffectClass* pRemoved = nullptr);
 		void RecalculateStatMultipliers();
 		void UpdateTemporal();
@@ -182,6 +190,7 @@ public:
 		void ManualIdleAction();
 		void StopRotateWithNewROT(int ROT = -1);
 		void UpdateCachedClick();
+		void ApplyMindControlRangeLimit();
 
 		UnitTypeClass* GetUnitTypeExtra() const;
 
@@ -242,7 +251,6 @@ public:
 
 	static void ChangeOwnerMissionFix(FootClass* pThis);
 	static void KillSelf(TechnoClass* pThis, AutoDeathBehavior deathOption, AnimTypeClass* pVanishAnimation, bool isInLimbo = false);
-	static void ApplyMindControlRangeLimit(TechnoClass* pThis);
 	static void ObjectKilledBy(TechnoClass* pThis, TechnoClass* pKiller);
 	static void UpdateSharedAmmo(TechnoClass* pThis);
 	static double GetCurrentSpeedMultiplier(FootClass* pThis);
@@ -253,7 +261,7 @@ public:
 	static CoordStruct PassengerKickOutLocation(TechnoClass* pThis, FootClass* pPassenger, int maxAttempts);
 	static bool AllowedTargetByZone(TechnoClass* pThis, TechnoClass* pTarget, TargetZoneScanType zoneScanType, WeaponTypeClass* pWeapon = nullptr, bool useZone = false, int zone = -1);
 	static void UpdateAttachedAnimLayers(TechnoClass* pThis);
-	static bool ConvertToType(FootClass* pThis, TechnoTypeClass* toType);
+	static bool ConvertToType(TechnoClass* pThis, TechnoTypeClass* toType);
 	static bool CanDeployIntoBuilding(UnitClass* pThis, bool noDeploysIntoDefaultValue = false);
 	static bool IsTypeImmune(TechnoClass* pThis, TechnoClass* pSource);
 	static int GetTintColor(TechnoClass* pThis, bool invulnerability, bool airstrike, bool berserk);

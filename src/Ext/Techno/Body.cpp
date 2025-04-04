@@ -3,6 +3,13 @@
 #include <AircraftClass.h>
 #include <HouseClass.h>
 #include <ScenarioClass.h>
+#include <SpawnManagerClass.h>
+#include <SlaveManagerClass.h>
+#include <ParasiteClass.h>
+#include <TemporalClass.h>
+#include <AirstrikeClass.h>
+#include <BombListClass.h>
+#include <TacticalClass.h>
 
 #include <Ext/Anim/Body.h>
 #include <Ext/House/Body.h>
@@ -60,6 +67,13 @@ TechnoExt::ExtData::~ExtData()
 		auto& vec = HouseExt::ExtMap.Find(pThis->Owner)->OwnedCountedHarvesters;
 		vec.erase(std::remove(vec.begin(), vec.end(), pThis), vec.end());
 	}
+
+	for (auto const pBolt : this->ElectricBolts)
+	{
+		pBolt->Owner = nullptr;
+	}
+
+	this->ElectricBolts.clear();
 }
 
 bool TechnoExt::IsActiveIgnoreEMP(TechnoClass* pThis)
@@ -297,13 +311,10 @@ bool TechnoExt::AllowedTargetByZone(TechnoClass* pThis, TechnoClass* pTarget, Ta
 	return true;
 }
 
-// Feature for common usage : TechnoType conversion -- Trsdy
-// BTW, who said it was merely a Type pointer replacement and he could make a better one than Ares?
-bool TechnoExt::ConvertToType(FootClass* pThis, TechnoTypeClass* pToType)
+bool ConvertToType_ProcessLikeAres(FootClass* pThis, TechnoTypeClass* pToType)
 {
-	if (AresFunctions::ConvertTypeTo)
-		return AresFunctions::ConvertTypeTo(pThis, pToType);
 	// In case not using Ares 3.0. Only update necessary vanilla properties
+
 	AbstractType rtti;
 	TechnoTypeClass** nowTypePtr;
 
@@ -400,6 +411,291 @@ bool TechnoExt::ConvertToType(FootClass* pThis, TechnoTypeClass* pToType)
 		pThis->Locomotor->Move_To(pThis->Location);
 
 	return true;
+}
+
+// Feature for common usage : TechnoType conversion -- Trsdy
+// BTW, who said it was merely a Type pointer replacement and he could make a better one than Ares?
+bool TechnoExt::ConvertToType(TechnoClass* pThis, TechnoTypeClass* pToType)
+{
+	const auto pPrevType = pThis->GetTechnoType();
+
+	// Different types prohibited
+	if (pPrevType->WhatAmI() != pToType->WhatAmI())
+	{
+		Debug::Log("Incompatible types between %s and %s\n", pThis->get_ID(), pToType->get_ID());
+		return false;
+	}
+
+	if (pToType->Spawns)
+	{
+		const auto pManager = pThis->SpawnManager;
+
+		if (!pManager)
+		{
+			pThis->SpawnManager = GameCreate<SpawnManagerClass>(pThis, pToType->Spawns, pToType->SpawnsNumber,
+				pToType->SpawnRegenRate, pToType->SpawnReloadRate);
+		}
+		else
+		{
+			pManager->SpawnType = pToType->Spawns;
+			pManager->SpawnCount = pToType->SpawnsNumber;
+			pManager->RegenRate = pToType->SpawnRegenRate;
+			pManager->ReloadRate = pToType->SpawnReloadRate;
+		}
+	}
+
+	if (pToType->Enslaves)
+	{
+		const auto pManager = pThis->SlaveManager;
+
+		if (!pManager)
+		{
+			pThis->SlaveManager = GameCreate<SlaveManagerClass>(pThis, pToType->Enslaves, pToType->SlavesNumber,
+				pToType->SlaveRegenRate, pToType->SlaveReloadRate);
+		}
+		else
+		{
+			pManager->SlaveType = pToType->Enslaves;
+			pManager->SlaveCount = pToType->SlavesNumber;
+			pManager->RegenRate = pToType->SlaveRegenRate;
+			pManager->ReloadRate = pToType->SlaveReloadRate;
+		}
+	}
+
+	if (const auto pWeapon = pToType->GetWeapon(0, pThis->Veterancy.IsElite()).WeaponType)
+	{
+		const auto pWH = pWeapon->Warhead;
+
+		if (pWH->MindControl)
+		{
+			const auto pManager = pThis->CaptureManager;
+
+			if (!pManager)
+			{
+				pThis->CaptureManager = GameCreate<CaptureManagerClass>(pThis, pWeapon->Damage,
+					pWeapon->InfiniteMindControl);
+			}
+			else
+			{
+				pManager->MaxControlNodes = pWeapon->Damage;
+				pManager->InfiniteMindControl = pWeapon->InfiniteMindControl;
+			}
+		}
+
+		if (pWH->Temporal)
+		{
+			const auto pTemporal = pThis->TemporalImUsing;
+
+			if (!pTemporal)
+			{
+				pThis->TemporalImUsing = GameCreate<TemporalClass>(pThis);
+				pThis->TemporalImUsing->WarpPerStep = pWeapon->Damage;
+			}
+			else
+			{
+				pTemporal->WarpPerStep = pWeapon->Damage;
+			}
+		}
+	}
+
+	if (pToType->AirstrikeTeam > 0)
+	{
+		if (!pThis->Airstrike)
+			pThis->Airstrike = GameCreate<AirstrikeClass>(pThis);
+
+		if (pThis->Airstrike->Owner == pThis)
+		{
+			const auto pAirstrike = pThis->Airstrike;
+			pAirstrike->AirstrikeTeam = pToType->AirstrikeTeam;
+			pAirstrike->EliteAirstrikeTeam = pToType->EliteAirstrikeTeam;
+			pAirstrike->AirstrikeRechargeTime = pToType->AirstrikeRechargeTime;
+			pAirstrike->EliteAirstrikeRechargeTime = pToType->EliteAirstrikeRechargeTime;
+			pAirstrike->AirstrikeTeamType = pToType->AirstrikeTeamType;
+			pAirstrike->EliteAirstrikeTeamType = pToType->EliteAirstrikeTeamType;
+		}
+		else
+		{
+			Debug::Log("Failed to replace AirstrikeTeam on %s when convert to type %s, because it is locking an airstrike target/locked as an airstrike target.\n",
+				pThis->get_ID(), pToType->get_ID());
+		}
+	}
+
+	// Skip disguise related
+	// if (pToType->CanDisguise && pToType->PermaDisguise)
+
+	auto turretRecoil = pThis->TurretRecoil.Turret;
+	auto turretData = pToType->TurretAnimData;
+	turretRecoil.Travel = turretData.Travel;
+	turretRecoil.CompressFrames = turretData.CompressFrames;
+	turretRecoil.RecoverFrames = turretData.RecoverFrames;
+	turretRecoil.HoldFrames = turretData.HoldFrames;
+	auto barrelRecoil = pThis->BarrelRecoil.Turret;
+	auto barrelData = pToType->BarrelAnimData;
+	barrelRecoil.Travel = barrelData.Travel;
+	barrelRecoil.CompressFrames = barrelData.CompressFrames;
+	barrelRecoil.RecoverFrames = barrelData.RecoverFrames;
+	barrelRecoil.HoldFrames = barrelData.HoldFrames;
+
+	if (pThis->Cloakable && !pToType->Cloakable)
+		pThis->Uncloak(true);
+
+	pThis->Cloakable = pToType->Cloakable;
+
+	if (pPrevType->BombSight)
+		BombListClass::Instance.RemoveDetector(pThis);
+
+	if (pToType->BombSight)
+		BombListClass::Instance.AddDetector(pThis);
+
+	pThis->BarrelFacing.SetCurrent(DirStruct(0x4000 - pToType->FireAngle));
+
+	pThis->UpdateSight(0, 0, 0, 0, 0);
+
+	if (pPrevType->GapGenerator)
+		pThis->DestroyGap();
+
+	if (pToType->GapGenerator)
+	{
+		const auto temp = pPrevType->GapRadiusInCells;
+		pThis->GapRadius = pToType->GapRadiusInCells;
+		pPrevType->GapRadiusInCells = pToType->GapRadiusInCells;
+		pThis->CreateGap();
+		pPrevType->GapRadiusInCells = temp;
+	}
+
+	if (pThis->WhatAmI() == AbstractType::Building)
+	{
+		const auto pBuilding = static_cast<BuildingClass*>(pThis);
+		const auto pToBuildingType = static_cast<BuildingTypeClass*>(pToType);
+		const auto pPrevBuildingType = static_cast<BuildingTypeClass*>(pPrevType);
+
+		// Maybe buggy
+		for (int i = 0; i < 21; ++i)
+		{
+			if (const auto pAnim = pBuilding->Anims[i])
+				GameDelete(pAnim);
+		}
+
+		// Skip audio related
+
+		// Maybe buggy
+		pBuilding->SetLinkCount(std::max(pToBuildingType->NumberOfDocks, 1));
+
+		if (pToBuildingType->LoadBuildup())
+			pBuilding->HasBuildUp = true;
+		else
+			pBuilding->AI_Sellable = false;
+
+		// Skip SecretLab related
+
+		// Same as foot
+
+		const auto tempUsing = pThis->TemporalImUsing;
+
+		if (tempUsing && tempUsing->Target)
+			tempUsing->LetGo();
+
+		const auto pOwner = pThis->Owner;
+		pOwner->RemoveTracking(pThis);
+
+		const auto oldHealth = pThis->Health;
+
+		// Maybe buggy
+		const auto coord = pBuilding->Location;
+		pBuilding->Limbo();
+		pBuilding->Type = pToBuildingType;
+		pBuilding->ActuallyPlacedOnMap = false;
+
+		// ++Unsorted::ScenarioInit;
+
+		if (!pBuilding->Unlimbo(coord, DirType::North))
+		{
+			pBuilding->UnInit();
+
+			Debug::Log("Failed to place %s with new building type %s, its place has already been occupied.\n", pPrevType->get_ID(), pToType->get_ID());
+			return true;
+		}
+
+		// --Unsorted::ScenarioInit;
+
+		pBuilding->Place(false);
+
+		pBuilding->unknown_coord_64C = CoordStruct::Empty;
+
+		pThis->SetHealthPercentage(static_cast<double>(oldHealth) / pPrevBuildingType->Strength);
+		pThis->EstimatedHealth = pThis->Health;
+
+		pOwner->AddTracking(pThis);
+		pOwner->RecheckTechTree = true;
+
+		pThis->Ammo = Math::min(pThis->Ammo, pToType->Ammo);
+
+		pThis->SecondaryFacing.SetROT(pToType->ROT);
+		pThis->PrimaryFacing.SetROT(pToType->ROT);
+
+		if (pPrevBuildingType->Turret != pToBuildingType->Turret)
+			pThis->PrimaryFacing.SetCurrent(DirStruct(0));
+
+		return true;
+	}
+	else
+	{
+		const auto pFoot = static_cast<FootClass*>(pThis);
+
+		if (const auto pWeapon = pToType->GetWeapon(0, pThis->Veterancy.IsElite()).WeaponType)
+		{
+			if (!pFoot->ParasiteImUsing && pWeapon->Warhead->Parasite)
+				pFoot->ParasiteImUsing = GameCreate<ParasiteClass>(pFoot);
+		}
+
+		if (pPrevType->SensorsSight)
+			pFoot->RemoveSensorsAt(CellStruct::Empty);
+
+		if (pToType->SensorsSight)
+		{
+			const auto temp = pPrevType->SensorsSight;
+			pPrevType->SensorsSight = pToType->SensorsSight;
+			pFoot->AddSensorsAt(CellStruct::Empty);
+			pPrevType->SensorsSight = temp;
+		}
+
+		if (pFoot->WhatAmI() == AbstractType::Unit)
+		{
+			const auto pUnit = static_cast<UnitClass*>(pFoot);
+			const auto pToUnitType = static_cast<UnitTypeClass*>(pToType);
+			const auto pPrevUnitType = static_cast<UnitTypeClass*>(pPrevType);
+
+			// Maybe buggy
+			if (pPrevUnitType->Gunner)
+				pUnit->RemoveGunner(nullptr);
+
+			if (pToUnitType->Gunner)
+			{
+				if (const auto pPassenger = pUnit->Passengers.GetFirstPassenger())
+					pUnit->ReceiveGunner(pPassenger);
+			}
+
+			if (pPrevUnitType->Turret != pToUnitType->Turret)
+				pUnit->SecondaryFacing.SetCurrent(pUnit->PrimaryFacing.Current());
+		}
+/*		else if (pFoot->WhatAmI() == AbstractType::Aircraft)
+		{
+			const auto pAircraft = static_cast<AircraftClass*>(pFoot);
+			const auto pToAircraftType = static_cast<AircraftTypeClass*>(pToType);
+			const auto pPrevAircraftType = static_cast<AircraftTypeClass*>(pPrevType);
+		}
+		else if (pFoot->WhatAmI() == AbstractType::Infantry)
+		{
+			const auto pInfantry = static_cast<InfantryClass*>(pFoot);
+			const auto pToInfantryType = static_cast<InfantryTypeClass*>(pToType);
+			const auto pPrevInfantryType = static_cast<InfantryTypeClass*>(pPrevType);
+		}*/
+
+		if (AresFunctions::ConvertTypeTo)
+			return AresFunctions::ConvertTypeTo(pThis, pToType);
+		else
+			return ConvertToType_ProcessLikeAres((FootClass*)pThis, pToType);
+	}
 }
 
 // Checks if vehicle can deploy into a building at its current location. If unit has no DeploysInto set returns noDeploysIntoDefaultValue (def = false) instead.
@@ -659,6 +955,7 @@ void TechnoExt::ExtData::Serialize(T& Stm)
 		.Process(this->AE)
 		.Process(this->SubterraneanHarvFreshFromFactory)
 		.Process(this->SubterraneanHarvRallyDest)
+		.Process(this->PreviousType)
 		.Process(this->AnimRefCount)
 		.Process(this->ReceiveDamage)
 		.Process(this->PassengerDeletionTimer)
@@ -801,3 +1098,4 @@ DEFINE_HOOK(0x70C264, TechnoClass_Save_Suffix, 0x5)
 
 	return 0;
 }
+

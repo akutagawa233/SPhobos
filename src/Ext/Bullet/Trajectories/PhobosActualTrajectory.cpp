@@ -85,8 +85,13 @@ bool ActualTrajectory::OnEarlyUpdate()
 {
 	if (this->WaitOneFrame && this->BulletPrepareCheck())
 		return false;
-
-	return this->PhobosTrajectory::OnEarlyUpdate();
+	// Check whether need to detonate first
+	if (this->PhobosTrajectory::OnEarlyUpdate())
+		return true;
+	// Restore ProjectileRange
+	this->CheckProjectileRange();
+	// Waiting for new location calculated
+	return false;
 }
 
 void ActualTrajectory::OnPreDetonate()
@@ -177,5 +182,5 @@ void ActualTrajectory::DisperseBurstSubstitution(double baseRadian)
 		extraRotate = Math::Pi * (pType->RotateCoord * (burst / (this->CountOfBurst - 1.0) - 0.5)) / 180;
 	}
 	// Rotate the selected angle
-	this->MovingVelocity = PhobosTrajectory::RotateAboutTheAxis(this->MovingVelocity, rotationAxis, extraRotate);
+	PhobosTrajectory::RotateAboutTheAxis(this->MovingVelocity, rotationAxis, extraRotate);
 }

@@ -53,6 +53,7 @@ public:
 		Valueable<bool> ImmuneToCrit;
 		Valueable<bool> MultiMindControl_ReleaseVictim;
 		Valueable<int> CameoPriority;
+		DWORD CameoPriority_Houses;
 		Valueable<bool> NoManualMove;
 		Valueable<bool> NoManualEject;
 		Nullable<int> InitialStrength;
@@ -288,15 +289,18 @@ public:
 		Valueable<TechnoTypeClass*> FakeOf;
 		CustomPalette CameoPal;
 
+		Nullable<bool> AmphibiousEnter;
+		Nullable<bool> AmphibiousUnload;
+		Nullable<bool> NoQueueUpToEnter;
+		Nullable<bool> NoQueueUpToUnload;
+		Valueable<bool> Passengers_BySize;
+
 		Valueable<int> RateDown_Delay;
 		Valueable<bool> RateDown_Reset;
 		Valueable<int> RateDown_Cover_Value;
 		Valueable<int> RateDown_Cover_AmmoBelow;
 
 		Valueable<bool> UniqueTechno;
-
-		Nullable<bool> NoQueueUpToEnter;
-		Nullable<bool> NoQueueUpToUnload;
 
 		Valueable<bool> CanManualReload;
 		Valueable<bool> CanManualReload_ResetROF;
@@ -365,10 +369,6 @@ public:
 
 		Valueable<bool> IgnoreRallyPoint;
 
-		Nullable<bool> Sinkable;
-		Valueable<bool> SinkableBySquid;
-		Valueable<int> SinkSpeed;
-
 		Valueable<int> JumpjetSpeedType;
 
 		Nullable<bool> KeepAlive;
@@ -422,6 +422,10 @@ public:
 		Nullable<double> VehicleDamagedSpeedMultiplier_Red;
 
 		Nullable<double> ProneSpeed;
+
+		Nullable<bool> Sinkable;
+		Valueable<bool> Sinkable_SquidGrab;
+		Valueable<int> SinkSpeed;
 
 		Nullable<BarTypeClass*> HealthBar_BarType;
 		Nullable<BarTypeClass*> ShieldBar_BarType;
@@ -477,6 +481,7 @@ public:
 			, ImmuneToCrit { false }
 			, MultiMindControl_ReleaseVictim { false }
 			, CameoPriority { 0 }
+			, CameoPriority_Houses { 0 }
 			, NoManualMove { false }
 			, NoManualEject { false }
 			, InitialStrength {}
@@ -712,15 +717,18 @@ public:
 			, FakeOf {}
 			, CameoPal {}
 
+			, AmphibiousEnter {}
+			, AmphibiousUnload {}
+			, NoQueueUpToEnter {}
+			, NoQueueUpToUnload {}
+			, Passengers_BySize { true }
+
 			, RateDown_Delay { 0 }
 			, RateDown_Reset { false }
 			, RateDown_Cover_Value { 0 }
 			, RateDown_Cover_AmmoBelow { -2 }
 
 			, UniqueTechno { false }
-
-			, NoQueueUpToEnter {}
-			, NoQueueUpToUnload {}
 
 			, CanManualReload { false }
 			, CanManualReload_ResetROF { true }
@@ -789,10 +797,6 @@ public:
 
 			, IgnoreRallyPoint { false }
 
-			, Sinkable { }
-			, SinkableBySquid { true }
-			, SinkSpeed { 5 }
-
 			, JumpjetSpeedType { 3 }
 
 			, KeepAlive {}
@@ -804,6 +808,57 @@ public:
 			, Wake_Grapple { }
 			, Wake_Sinking { }
 
+			, AttackMove_Aggressive {}
+			, AttackMove_UpdateTarget {}
+
+			, BunkerableAnyway { false }
+			, KeepTargetOnMove { false }
+			, KeepTargetOnMove_ExtraDistance { Leptons(0) }
+
+			, Power { }
+
+			, ExtraTurretCount { 0 }
+			, ExtraTurretOffsets { }
+			, BurstPerTurret { 0 }
+
+      		, Image_ConditionYellow { }
+			, Image_ConditionRed { }
+			, WaterImage_ConditionYellow { }
+			, WaterImage_ConditionRed { }
+
+			, InitialSpawnsNumber { }
+			, Spawns_Queue { }
+
+			, Spawner_RecycleRange { Leptons(-1) }
+			, Spawner_RecycleAnim { }
+			, Spawner_RecycleCoord { {0,0,0} }
+			, Spawner_RecycleOnTurret { false }
+
+			, RadarInvisible_ToSelf { false }
+			, RadarInvisible_ToAlly { false }
+
+			, DefaultVisualCharacter { 0 }
+			, DefaultVisualCharacterToSelf { }
+			, DefaultVisualCharacterToAlly { }
+			, DefaultVisualCharacterToEnemy { }
+
+			, IgnoredByMouse { false }
+			, IgnoredByMouse_ToSelf { }
+			, IgnoredByMouse_ToAlly { }
+			, IgnoredByMouse_ToEnemy { }
+
+			, Cloneable { true }
+			, ClonedAt { }
+			, ClonedAs { }
+
+			, VehicleDamagedSpeedMultiplier_Yellow { }
+			, VehicleDamagedSpeedMultiplier_Red { }
+
+			, ProneSpeed { }
+
+			, Sinkable { }
+			, Sinkable_SquidGrab { true }
+			, SinkSpeed { 5 }
 			, HealthBar_BarType { }
 			, ShieldBar_BarType { }
 		{ }

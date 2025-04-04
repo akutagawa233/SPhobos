@@ -48,6 +48,7 @@ void SWTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->Message_FirerColor)
 		.Process(this->UIDescription)
 		.Process(this->CameoPriority)
+		.Process(this->CameoPriority_Houses)
 		.Process(this->LimboDelivery_Types)
 		.Process(this->LimboDelivery_IDs)
 		.Process(this->LimboDelivery_RandomWeightsData)
@@ -143,6 +144,7 @@ void SWTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 
 	this->UIDescription.Read(exINI, pSection, "UIDescription");
 	this->CameoPriority.Read(exINI, pSection, "CameoPriority");
+	this->CameoPriority_Houses = pINI->ReadHouseTypesList(pSection, "CameoPriority.Houses", this->CameoPriority_Houses);
 	this->LimboDelivery_Types.Read(exINI, pSection, "LimboDelivery.Types");
 	this->LimboDelivery_IDs.Read(exINI, pSection, "LimboDelivery.IDs");
 	this->LimboDelivery_RollChances.Read(exINI, pSection, "LimboDelivery.RollChances");
@@ -232,9 +234,6 @@ void SWTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->SuperWeaponSidebar_PriorityHouses = pINI->ReadHouseTypesList(pSection, "SuperWeaponSidebar.PriorityHouses", this->SuperWeaponSidebar_PriorityHouses);
 	this->SuperWeaponSidebar_RequiredHouses = pINI->ReadHouseTypesList(pSection, "SuperWeaponSidebar.RequiredHouses", this->SuperWeaponSidebar_RequiredHouses);
 
-	this->SidebarPal.LoadFromINI(pINI, pSection, "SidebarPalette");
-	this->SidebarPCX.Read(pINI, pSection, "SidebarPCX");
-
 	this->UseWeeds.Read(exINI, pSection, "UseWeeds");
 	this->UseWeeds_Amount.Read(exINI, pSection, "UseWeeds.Amount");
 	this->UseWeeds_StorageTimer.Read(exINI, pSection, "UseWeeds.StorageTimer");
@@ -271,6 +270,12 @@ void SWTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 		else
 			this->SW_GrantOneTime_RandomWeightsData.push_back(std::move(weights3));
 	}
+
+	// Ares 0.1
+	this->SidebarPal.LoadFromINI(pINI, pSection, "SidebarPalette");
+
+	// Ares 0.2
+	this->SidebarPCX.Read(pINI, pSection, "SidebarPCX");
 }
 
 void SWTypeExt::ExtData::LoadFromStream(PhobosStreamReader& Stm)

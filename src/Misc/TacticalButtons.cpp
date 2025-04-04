@@ -472,7 +472,30 @@ void TacticalButtonsClass::CurrentSelectInfoDraw()
 		drawText("TurretRecoil = %.3f , BarrelRecoil = %.3f", pTechno->TurretRecoil.TravelSoFar, pTechno->BarrelRecoil.TravelSoFar);
 		drawText("%d Passengers , First Passenger = %s", pTechno->Passengers.NumPassengers, (pTechno->Passengers.NumPassengers > 0 ? pTechno->Passengers.FirstPassenger->GetTechnoType()->ID : "N/A"));
 
-		drawInfo("Target", pTechno, pTechno->Target);
+		if (const auto pTarget = pTechno->Target)
+		{
+			auto mapCoords = CellStruct::Empty;
+			auto ID = "Unknown";
+
+			if (auto const pObject = abstract_cast<ObjectClass*>(pTarget))
+			{
+				mapCoords = pObject->GetMapCoords();
+				ID = pObject->GetType()->get_ID();
+			}
+			else if (auto const pCell = abstract_cast<CellClass*>(pTarget))
+			{
+				mapCoords = pCell->MapCoords;
+				ID = "Cell";
+			}
+
+			const auto distance = (pTechno->DistanceFrom(pTarget) / Unsorted::LeptonsPerCell);
+			drawText("Target: %s , At( %d , %d ) , %d apart , In range : %s", ID, mapCoords.X, mapCoords.Y, distance, (pTechno->IsCloseEnough(pTarget, pTechno->SelectWeapon(pTarget)) ? "Yes" : "No"));
+		}
+		else
+		{
+			drawText("Target: N/A");
+		}
+
 		drawInfo("Last Target", pTechno, pTechno->LastTarget);
 		drawInfo("Nth Link", pTechno, pTechno->GetNthLink());
 
@@ -543,6 +566,8 @@ void TacticalButtonsClass::CurrentSelectInfoDraw()
 				drawText("PathDir = %d , %d , %d , %d , %d , %d , %d , %d", pD[0], pD[1], pD[2], pD[3], pD[4], pD[5], pD[6], pD[7]);
 
 			drawText("CurrentSpeed = %d , PercentSpeed = %d", static_cast<int>(pFoot->GetCurrentSpeed()), static_cast<int>(pFoot->SpeedPercentage * 100));
+			drawText("OnBridge = %s , NearElevatedBridge = %s", (pFoot->OnBridge ? "Yes" : "No"), (reinterpret_cast<bool(__thiscall*)(FootClass*)>(0x703B10)(pFoot) ? "Yes" : "No"));
+			drawText("CellAfterBridge = %s", (pFoot->vt_entry_2B0() ? "Yes" : "No"));
 			drawText("Scattering = %s , Aggressive = %s", (pExt->ScatteringStopFrame >= Unsorted::CurrentFrame ? "Yes" : "No"), (pExt->AggressiveStance ? "Yes" : "No"));
 
 			drawInfo("Destination", pFoot, pFoot->Destination);
@@ -712,6 +737,8 @@ void TacticalButtonsClass::CurrentSelectInfoDraw()
 		drawText("  Unknown_200 - %s", (pCell->Flags & CellFlags::Unknown_200 ? "Yes" : "No"));
 		drawText("  BridgeBody - %s", (pCell->Flags & CellFlags::BridgeBody ? "Yes" : "No"));
 		drawText("  BridgeDir - %s", (pCell->Flags & CellFlags::BridgeDir ? "Yes" : "No"));
+		drawText("  PixelFX - %s", (pCell->Flags & CellFlags::PixelFX ? "Yes" : "No"));
+		drawText("  DrawDarkenIfInAir - %s", (pCell->Flags & CellFlags::DrawDarkenIfInAir ? "Yes" : "No"));
 
 		const auto nOF = pCell->OccupationFlags;
 		const auto nAF = pCell->AltOccupationFlags;
@@ -735,7 +762,7 @@ void TacticalButtonsClass::CurrentSelectInfoDraw()
 		drawText("Display: LeftDrag ( %s ) , LeftDown ( %s )", pMouse->DraggingRectangle ? "Yes" : "No", pMouse->unknown_bool_11D0 ? "Yes" : "No");
 		drawText("Display: LeftDownLocation ( %d , %d )", pMouse->unknown_11D4.X, pMouse->unknown_11D4.Y);
 
-		drawText("Radar: RadarScope ( %d , %d , %d , %d )", pMouse->unknown_rect_14DC.X, pMouse->unknown_rect_14DC.Y, pMouse->unknown_rect_14DC.Width, pMouse->unknown_rect_14DC.Height);
+		drawText("Radar: RadarScopeRect ( %d , %d , %d , %d )", pMouse->unknown_rect_14DC.X, pMouse->unknown_rect_14DC.Y, pMouse->unknown_rect_14DC.Width, pMouse->unknown_rect_14DC.Height);
 
 		drawText("Power: Wait ( %d ) , Floating ( %s )", pMouse->unknown_151C, pMouse->unknown_bool_1538 ? "Yes" : "No");
 		drawText("Power: Green ( %d ) , Yellow ( %d ) , Red ( %d )", pMouse->unknown_152C, pMouse->unknown_1530, pMouse->unknown_1534);
