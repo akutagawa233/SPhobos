@@ -40,6 +40,9 @@ public:
 		bool SWSidebar_Enable;
 		std::vector<int> SWSidebar_Indices;
 
+		bool TechTreeSidebar_Enable;
+		std::vector<int> TechTreeSidebar_Indices;
+
 		DWORD OwnerBitfield_BuildingType;
 		DWORD OwnerBitfield_InfantryType;
 		DWORD OwnerBitfield_VehicleType;

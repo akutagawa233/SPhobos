@@ -1,5 +1,5 @@
-#include "SWButtonClass.h"
-#include "SWSidebarClass.h"
+#include "TechTreeButtonClass.h"
+#include "TechTreeSidebarClass.h"
 #include <EventClass.h>
 #include <CCToolTip.h>
 #include <CommandClass.h>
@@ -8,42 +8,23 @@
 #include <Ext/SWType/Body.h>
 #include <Utilities/AresFunctions.h>
 
-/**
- * @brief SWButtonClass 构造函数 - 创建侧边栏按钮控件
- *
- * @param id        控件唯一标识符
- * @param superIdx  父级容器索引（用于层级管理）
- * @param x         控件左上角X坐标
- * @param y         控件左上角Y坐标
- * @param width     控件宽度
- * @param width     控件高度
- *
- * 继承自 ControlClass 的初始化参数：
- * - 默认启用左右键点击事件（GadgetFlag::LeftPress | GadgetFlag::RightPress）
- * - 默认不启用背景透明标志（最后一个false参数）
- *
- * 功能说明：
- * 1. 将新建的按钮自动添加到侧边栏最后一列的按钮容器中
- * 2. 按钮禁用状态与侧边栏整体启用状态同步
- */
-SWButtonClass::SWButtonClass(unsigned int id, int superIdx, int x, int y, int width, int height)
+TechTreeButtonClass::TechTreeButtonClass(unsigned int id, int superIdx, int x, int y, int width, int height)
 	: ControlClass(id, x, y, width, height, (GadgetFlag::LeftPress | GadgetFlag::RightPress), false)
 	, SuperIndex(superIdx)
 {
 	// 将当前按钮添加到侧边栏最后一列的按钮集合
-	if (const auto backColumn = SWSidebarClass::Instance.Columns.back())
-		backColumn->Buttons.emplace_back(this);
+	//if (const auto backColumn = TechTreeSidebarClass::Instance.Columns.back())
+		//backColumn->Buttons.emplace_back(this);
 
 	// 根据侧边栏全局启用状态设置按钮禁用状态
-	this->Disabled = !SWSidebarClass::IsEnabled();
+	this->Disabled = !TechTreeSidebarClass::IsEnabled();
 }
 
-bool SWButtonClass::Draw(bool forced)
+bool TechTreeButtonClass::Draw(bool forced)
 {
 	// 非强制绘制时直接返回
 	if (!forced)
 		return false;
-
 	// 获取绘制表面和基础坐标信息
 	const auto pSurface = DSurface::Composite;
 	auto bounds = pSurface->GetRect();
@@ -54,7 +35,6 @@ bool SWButtonClass::Draw(bool forced)
 	const auto pCurrent = HouseClass::CurrentPlayer;
 	const auto pSuper = pCurrent->Supers[this->SuperIndex];
 	const auto pSWExt = SWTypeExt::ExtMap.Find(pSuper->Type);
-
 	// 处理不同类型的图标绘制
 	// 优先使用PCX格式的新式图标
 	// support for pcx cameos
@@ -84,7 +64,6 @@ bool SWButtonClass::Draw(bool forced)
 			pSurface->DrawSHP(pConvert, pCameo, 0, &location, &bounds, BlitterFlags::bf_400, 0, 0, ZGradient::Ground, 1000, 0, nullptr, 0, 0, 0);
 		}
 	}
-
 	// 绘制悬停状态边框
 	if (this->IsHovering)
 	{
@@ -93,7 +72,6 @@ bool SWButtonClass::Draw(bool forced)
 		const COLORREF tooltipColor = Drawing::RGB_To_Int(Drawing::TooltipColor);
 		pSurface->DrawRect(&cameoRect, tooltipColor);
 	}
-
 	// 检查禁用条件并绘制暗化效果
 	if (pSuper->IsReady && !pCurrent->CanTransactMoney(pSWExt->Money_Amount) ||
 		(pSWExt->SW_UseAITargeting && AresFunctions::IsTargetConstraintsEligible && !AresFunctions::IsTargetConstraintsEligible(AresFunctions::SWTypeExtMap_Find(pSuper->Type), HouseClass::CurrentPlayer, true)))
@@ -102,42 +80,9 @@ bool SWButtonClass::Draw(bool forced)
 		RectangleStruct darkenBounds { 0, 0, location.X + this->Width, location.Y + this->Height };
 		pSurface->DrawSHP(FileSystem::SIDEBAR_PAL, FileSystem::DARKEN_SHP, 0, &location, &darkenBounds, BlitterFlags::bf_400 | BlitterFlags::Darken, 0, 0, ZGradient::Ground, 1000, 0, nullptr, 0, 0, 0);
 	}
-
 	// 判断准备状态并处理显示逻辑
 	const bool ready = !pSuper->IsSuspended && (pSuper->Type->UseChargeDrain ? pSuper->ChargeDrainState == ChargeDrainState::Ready : pSuper->IsReady);
 	bool drawReadiness = true;
-
-	// 第一列按钮显示数字热键提示
-	if (ready && this->ColumnIndex == 0)
-	{
-		// 查找并绘制热键数字标签
-		auto& buttons = SWSidebarClass::Instance.Columns[this->ColumnIndex]->Buttons;
-		const int buttonId = std::distance(buttons.begin(), std::find(buttons.begin(), buttons.end(), this));
-
-		if (buttonId < 10)
-		{
-			unsigned short hotkey = 0;
-			for (int i = 0; i < CommandClass::Hotkeys.IndexCount; i++)
-			{
-				if (CommandClass::Hotkeys.IndexTable[i].Data == SWSidebarClass::Commands[buttonId])
-					hotkey = CommandClass::Hotkeys.IndexTable[i].ID;
-			}
-
-			Point2D textLoc = { location.X + this->Width / 2, location.Y };
-			const COLORREF foreColor = Drawing::RGB_To_Int(Drawing::TooltipColor);
-			constexpr TextPrintType printType = TextPrintType::FullShadow | TextPrintType::Point8 | TextPrintType::Background | TextPrintType::Center;
-
-			wchar_t buffer[64];
-			UI::GetKeyboardKeyString(hotkey, buffer);
-
-			if (std::wcslen(buffer))
-			{
-				pSurface->DrawTextA(buffer, &bounds, &textLoc, foreColor, 0, printType);
-				drawReadiness = false;
-			}
-		}
-	}
-
 	// 绘制准备状态文本
 	if (drawReadiness)
 	{
@@ -159,42 +104,41 @@ bool SWButtonClass::Draw(bool forced)
 		Point2D loc = { location.X, location.Y };
 		pSurface->DrawSHP(FileSystem::SIDEBAR_PAL, FileSystem::GCLOCK2_SHP, pSuper->AnimStage() + 1, &loc, &bounds, BlitterFlags::bf_400 | BlitterFlags::TransLucent50, 0, 0, ZGradient::Ground, 1000, 0, nullptr, 0, 0, 0);
 	}
-
 	return true;
 }
 
-void SWButtonClass::OnMouseEnter()
+void TechTreeButtonClass::OnMouseEnter()
 {
 	// 检查侧边栏是否处于可用状态
-	if (!SWSidebarClass::IsEnabled())
+	if (!TechTreeSidebarClass::IsEnabled())
 		return;
 
 	// 更新按钮悬停状态和侧边栏当前按钮记录
 	this->IsHovering = true;
-	SWSidebarClass::Instance.CurrentButton = this;
+	TechTreeSidebarClass::Instance.CurrentButton = this;
 	// 触发对应列的鼠标进入动画效果（根据按钮所在的列索引）
-	SWSidebarClass::Instance.Columns[this->ColumnIndex]->OnMouseEnter();
+	TechTreeSidebarClass::Instance.Columns[this->ColumnIndex]->OnMouseEnter();
 	// 立即显示工具提示（通过保存原始延迟时间并设置0延迟实现）
 	CCToolTip::Instance->SaveTimerDelay();
 	CCToolTip::Instance->SetTimerDelay(0);
 }
 
-void SWButtonClass::OnMouseLeave()
+void TechTreeButtonClass::OnMouseLeave()
 {
 	// 更新按钮悬停状态
 	this->IsHovering = false;
 	// 清除侧边栏记录的当前悬停按钮
-	SWSidebarClass::Instance.CurrentButton = nullptr;
+	TechTreeSidebarClass::Instance.CurrentButton = nullptr;
 	// 通知所属列处理鼠标离开事件（列级别的悬停状态更新等）
-	SWSidebarClass::Instance.Columns[this->ColumnIndex]->OnMouseLeave();
+	TechTreeSidebarClass::Instance.Columns[this->ColumnIndex]->OnMouseLeave();
 	// 恢复工具提示控件的默认显示延迟（取消可能的临时延迟设置）
 	CCToolTip::Instance->RestoreTimeDelay();
 }
 
-bool SWButtonClass::Action(GadgetFlag flags, DWORD* pKey, KeyModifier modifier)
+bool TechTreeButtonClass::Action(GadgetFlag flags, DWORD* pKey, KeyModifier modifier)
 {
 	// 有效性检查：侧边栏未启用时直接返回
-	if (!SWSidebarClass::IsEnabled())
+	if (!TechTreeSidebarClass::IsEnabled())
 		return false;
 
 	// 右键按下处理：清除当前选择的超级武器类型
@@ -215,12 +159,12 @@ bool SWButtonClass::Action(GadgetFlag flags, DWORD* pKey, KeyModifier modifier)
 	return true;
 }
 
-void SWButtonClass::SetColumn(int column)
+void TechTreeButtonClass::SetColumn(int column)
 {
 	this->ColumnIndex = column;
 }
 
-bool SWButtonClass::LaunchSuper() const
+bool TechTreeButtonClass::LaunchSuper() const
 {
 	// 获取当前玩家及超级武器数据
 	const auto pCurrent = HouseClass::CurrentPlayer;

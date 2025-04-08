@@ -66,10 +66,12 @@ DEFINE_HOOK(0x6D4C68, PrintTimerOnTactical_End, 0x8)
 	return 0;
 }
 
+// 定义一个钩子函数，用于定时器（超级武器，使命等）闪烁的颜色方案
 DEFINE_HOOK(0x6D4CD9, PrintTimerOnTactical_BlinkColor, 0x6)
 {
 	enum { SkipGameCode = 0x6D4CE2 };
 
+	// 设置颜色方案数组的EDI寄存器，以获取全局规则中的计时器闪烁颜色方案
 	R->EDI(ColorScheme::Array.GetItem(RulesExt::Global()->TimerBlinkColorScheme));
 
 	return SkipGameCode;

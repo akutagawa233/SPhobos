@@ -233,12 +233,12 @@ void PhobosToolTip::HelpText_Super(int swidx)
 }
 
 // Hooks
-
+//侧边栏_工具栏_帮助说明
 DEFINE_HOOK(0x6A9316, SidebarClass_StripClass_HelpText, 0x6)
 {
 	PhobosToolTip::Instance.IsCameo = true;
 
-	if (!PhobosToolTip::Instance.IsEnabled())
+	if (!PhobosToolTip::Instance.IsEnabled())//检测工具描述是否启用，不启用则直接继续执行源代码
 		return 0;
 
 	GET(StripClass*, pThis, EAX);
@@ -247,30 +247,38 @@ DEFINE_HOOK(0x6A9316, SidebarClass_StripClass_HelpText, 0x6)
 	return 0x6A93DE;
 }
 
+//显示工具提醒的钩子,任何需要显示工具提示的地方都可以调用这个钩子
 DEFINE_HOOK(0x4AE51E, DisplayClass_GetToolTip_HelpText, 0x6)
 {
 	enum { ApplyToolTip = 0x4AE69D };
-
+	// 检查超武侧边栏是否已启用
 	if (SWSidebarClass::IsEnabled())
 	{
+		// 如果当前有按钮被选中
 		if (const auto button = SWSidebarClass::Instance.CurrentButton)
 		{
+			// 设置工具提示实例的标志为 cameo
 			PhobosToolTip::Instance.IsCameo = true;
 
+			// 检查 Phobos 工具提示是否已启用
 			if (PhobosToolTip::Instance.IsEnabled())
 			{
+				// 调用方法设置帮助文本，并获取缓冲区地址
 				PhobosToolTip::Instance.HelpText_Super(button->SuperIndex);
 				R->EAX(PhobosToolTip::Instance.GetBuffer());
 			}
 			else
 			{
+				// 获取当前玩家的超级武器信息，并设置工具提示为超级武器的 UI 名称
 				const auto pSuper = HouseClass::CurrentPlayer->Supers[button->SuperIndex];
 				R->EAX(pSuper->Type->UIName);
 			}
 
 			return ApplyToolTip;
 		}
+		// 如果当前有列被选中或者切换按钮处于悬停状态
 		else if (SWSidebarClass::Instance.CurrentColumn
+			// 设置工具提示为空，并跳转到特定地址应用工具提示
 			|| SWSidebarClass::Instance.ToggleButton && SWSidebarClass::Instance.ToggleButton->IsHovering)
 		{
 			R->EAX(0);
@@ -278,25 +286,32 @@ DEFINE_HOOK(0x4AE51E, DisplayClass_GetToolTip_HelpText, 0x6)
 		}
 	}
 
+	// 检查独特单位栏是否有单位被悬停
 	const auto uniqueIndex = UniqueTechnoColumnClass::Instance.Hovering;
 
 	if (uniqueIndex >= 0)
 	{
+		// 获取全局拥有的独特单位向量
 		auto& vec = ScenarioExt::Global()->OwnedUniqueTechnos;
 
+		// 如果独特单位索引在向量范围内
 		if (uniqueIndex < static_cast<int>(vec.size()))
 		{
+			// 设置工具提示为独特单位的 UI 名称，并跳转到特定地址应用工具提示
 			R->EAX(vec[uniqueIndex]->TypeExtData->OwnerObject()->UIName);
 			return ApplyToolTip;
 		}
 	}
 
+	// 检查选定信息是否处于悬停状态
 	if (SelectedInfoClass::Instance.IsHovering)
 	{
+		// 设置工具提示为空，并跳转到特定地址应用工具提示
 		R->EAX(0);
 		return ApplyToolTip;
 	}
 
+	// 如果以上条件都不满足，继续执行原代码
 	return 0;
 }
 
@@ -304,41 +319,55 @@ DEFINE_HOOK(0x4AE51E, DisplayClass_GetToolTip_HelpText, 0x6)
 
 DEFINE_HOOK(0x478EE1, CCToolTip_Draw2_SetBuffer, 0x6)
 {
+	// 检查Phobos工具提示是否已启用，并且当前提示是否为Cameo类型
 	if (PhobosToolTip::Instance.IsEnabled() && PhobosToolTip::Instance.IsCameo)
+		// 如果是，则将EDI寄存器的值设置为Phobos工具提示的缓冲区地址
 		R->EDI(PhobosToolTip::Instance.GetBuffer());
 	return 0;
 }
 
 DEFINE_HOOK(0x478E10, CCToolTip_Draw1, 0x0)
 {
+	// 获取CCToolTip对象的指针，以便后续操作
 	GET(CCToolTip*, pThis, ECX);
+	// 从堆栈中获取是否进行完整重绘的标志
 	GET_STACK(bool, bFullRedraw, 0x4);
 
 	// !onSidebar or (onSidebar && ExtToolTip::IsCameo)
+	// 根据条件判断是否需要重新创建CCToolTip对象
 	if (!bFullRedraw || PhobosToolTip::Instance.IsCameo)
 	{
 		PhobosToolTip::Instance.IsCameo = false;
 		PhobosToolTip::Instance.SlaveDraw = false;
 
+		// 调用Process方法重新创建CCToolTip对象
 		pThis->ToolTipManager::Process();	//this function re-create CCToolTip
 	}
 
+	// 如果当前存在ToolTip，则根据条件进行绘制
 	if (pThis->CurrentToolTip)
 	{
+		// 如果不进行完整重绘，则根据IsCameo状态设置SlaveDraw标志
 		if (!bFullRedraw)
 			PhobosToolTip::Instance.SlaveDraw = PhobosToolTip::Instance.IsCameo;
 
+		// 设置CCToolTip对象的FullRedraw标志
 		pThis->FullRedraw = bFullRedraw;
+		// 调用DrawText方法绘制当前的ToolTip
 		pThis->DrawText(pThis->CurrentToolTipData);
 	}
 	return 0x478E25;
 }
 
+//设置外观
 DEFINE_HOOK(0x478E4A, CCToolTip_Draw2_SetSurface, 0x6)
 {
+	// 检查是否需要使用从属绘制方式
 	if (PhobosToolTip::Instance.SlaveDraw)
 	{
+		//设置绘制表面为复合表面
 		R->ESI(DSurface::Composite);
+		// 跳转到新的代码位置，以完成从属绘制
 		return 0x478ED3;
 	}
 	return 0;

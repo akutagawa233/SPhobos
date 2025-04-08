@@ -23,6 +23,9 @@
     <ClCompile Include="src\Ext\Sidebar\SWSidebar\SWSidebarClass.cpp" />
     <ClCompile Include="src\Ext\Sidebar\SWSidebar\SWButtonClass.cpp" />
     <ClCompile Include="src\Ext\Sidebar\SWSidebar\ToggleSWButtonClass.cpp" />
+    <ClCompile Include="src\Ext\Sidebar\TechTreeBar\TechTreeButtonClass.cpp" />
+    <ClCompile Include="src\Ext\Sidebar\TechTreeBar\TechTreeColumnClass.cpp" />
+    <ClCompile Include="src\Ext\Sidebar\TechTreeBar\TechTreeSidebarClass.cpp" />
     <ClCompile Include="src\Ext\Sidebar\UniqueButton\UniqueTechnoButtonClass.cpp" />
     <ClCompile Include="src\Ext\Sidebar\UniqueButton\UniqueTechnoColumnClass.cpp" />
     <ClCompile Include="src\Ext\Sidebar\SelectedButton\SelectedButtonClass.cpp" />
@@ -231,6 +234,9 @@
     <ClInclude Include="src\Ext\Sidebar\SWSidebar\SWSidebarClass.h" />
     <ClInclude Include="src\Ext\Sidebar\SWSidebar\SWButtonClass.h" />
     <ClInclude Include="src\Ext\Sidebar\SWSidebar\ToggleSWButtonClass.h" />
+    <ClInclude Include="src\Ext\Sidebar\TechTreeBar\TechTreeButtonClass.h" />
+    <ClInclude Include="src\Ext\Sidebar\TechTreeBar\TechTreeColumnClass.h" />
+    <ClInclude Include="src\Ext\Sidebar\TechTreeBar\TechTreeSidebarClass.h" />
     <ClInclude Include="src\Ext\Sidebar\UniqueButton\UniqueTechnoButtonClass.h" />
     <ClInclude Include="src\Ext\Sidebar\UniqueButton\UniqueTechnoColumnClass.h" />
     <ClInclude Include="src\Ext\Sidebar\SelectedButton\SelectedButtonClass.h" />

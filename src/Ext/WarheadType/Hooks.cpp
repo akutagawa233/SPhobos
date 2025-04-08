@@ -10,7 +10,7 @@
 #include <Utilities/EnumFunctions.h>
 
 #pragma region Detonation
-
+//弹头引爆钩子
 DEFINE_HOOK(0x46920B, BulletClass_Detonate, 0x6)
 {
 	GET(BulletClass* const, pBullet, ESI);
@@ -543,4 +543,13 @@ DEFINE_HOOK(0x4D73DE, FootClass_ReceiveDamage_RemoveParasite, 0x5)
 		return Skip;
 
 	return Continue;
+}
+
+//按照WW原版逻辑用钩子复刻了一次金钱获取
+DEFINE_HOOK(0x4F9954, HouseClass_TakeMoney, 0xe)
+{
+	GET(HouseClass*, pThis, ECX)
+	GET_STACK(int, amount, 0x4);
+		pThis->Balance += amount;
+	return 0;
 }
