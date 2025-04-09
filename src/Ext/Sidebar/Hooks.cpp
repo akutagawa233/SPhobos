@@ -184,13 +184,17 @@ DEFINE_HOOK(0x6A9BC5, StripClass_Draw_DrawGreyCameoExtraCover, 0x6)
 				1000, 0, 0, 0, 0, 0);
 		}
 
+		// 判断是否应该显示统计信息，考虑全局配置和建筑类型的特殊设置
 		const bool statistics = Phobos::Config::ShowBuildingStatistics
 			&& pTypeExt->Cameo_ShouldCount.Get(pBuildingType->BuildCat != BuildCat::Combat || pBuildingType->BuildLimit != INT_MAX);
 
+		// 当存在有效帧需要绘制或需要显示统计信息时进入逻辑
 		if ((frameSize && frames[0] >= 0) || statistics)
 		{
+			// 获取当前玩家拥有的该类型建筑数量（包含部署/升级中的状态）
 			if (const auto count = HouseExt::CountOwnedPresentWithDeployOrUpgrade(HouseClass::CurrentPlayer, pBuildingType, true))
 			{
+				// 绘制图标覆盖层（建造动画/状态指示）
 				if (frameSize && frames[0] >= 0)
 				{
 					DSurface::Sidebar->DrawSHP(
@@ -205,14 +209,17 @@ DEFINE_HOOK(0x6A9BC5, StripClass_Draw_DrawGreyCameoExtraCover, 0x6)
 						1000, 0, 0, 0, 0, 0);
 				}
 
+				// 绘制统计数字
 				if (statistics)
 				{
 					GET_STACK(RectangleStruct, surfaceRect, STACK_OFFSET(0x48C, -0x438));
 
+					// 设置文本绘制参数
 					const COLORREF color = Drawing::RGB_To_Int(Drawing::TooltipColor);
 					const TextPrintType printType = TextPrintType::Background | TextPrintType::FullShadow | TextPrintType::Point8;
 					auto textPosition = Point2D { destX, destY + 1 };
 
+					// 格式化并绘制数量文本
 					wchar_t text[0x20];
 					swprintf_s(text, L"%d", count);
 					DSurface::Sidebar->DrawTextA(text, &surfaceRect, &textPosition, color, 0, printType);

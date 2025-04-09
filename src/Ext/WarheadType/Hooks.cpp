@@ -550,6 +550,6 @@ DEFINE_HOOK(0x4F9954, HouseClass_TakeMoney, 0xe)
 {
 	GET(HouseClass*, pThis, ECX)
 	GET_STACK(int, amount, 0x4);
-		pThis->Balance += amount;
+	pThis->Balance += amount;
 	return 0;
 }

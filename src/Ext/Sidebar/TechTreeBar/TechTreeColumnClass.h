@@ -11,7 +11,9 @@ public:
 	TechTreeColumnClass(unsigned int id, int maxButtons, int x, int y, int width, int height);
 	~TechTreeColumnClass() = default;
 
-private:
+	void ClearButtons(bool remove = true);
 
+	std::vector<TechTreeButtonClass*> Buttons {};
+	int MaxButtons { 0 };
 };
 

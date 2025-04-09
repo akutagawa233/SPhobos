@@ -363,16 +363,33 @@ void HouseExt::GetAIChronoshiftSupers(HouseClass* pThis, SuperClass*& pSuperCSph
 	}
 }
 
+/**
+ * @brief 统计指定阵营中拥有并存在的特定技术类型单位数量（扩展方法）
+ *
+ * 根据技术类型的不同类别（建筑、步兵、单位、飞行器），调用不同的计数方法，
+ * 支持考虑升级状态和部署状态。
+ *
+ * @param pHouse 要统计的所属阵营指针
+ * @param pTechnoType 要检查的技术类型指针（建筑/步兵/单位/飞行器类型）
+ * @param upgrade 是否包含升级中的单位（仅对建筑类型有效）
+ * @param deploy 是否包含部署状态的单位（对建筑和单位类型有效）
+ * @return int 返回符合条件的单位数量，无法处理类型默认返回0
+ */
 int HouseExt::CountOwnedPresentExt(HouseClass* pHouse, TechnoTypeClass* pTechnoType, bool upgrade, bool deploy)
 {
+	// 根据技术类型分类处理
 	switch (pTechnoType->WhatAmI())
 	{
+		// 处理建筑类型，考虑升级和部署状态
 	case AbstractType::BuildingType:
 		return HouseExt::CountOwnedPresentWithDeployOrUpgrade(pHouse, static_cast<BuildingTypeClass*>(pTechnoType), upgrade, deploy);
+		// 直接获取步兵类型数量（不处理升级/部署状态）
 	case AbstractType::InfantryType:
 		return pHouse->CountOwnedAndPresent(static_cast<InfantryTypeClass*>(pTechnoType));
+		// 处理载具类型，考虑部署状态
 	case AbstractType::UnitType:
 		return HouseExt::CountOwnedPresentWithDeploy(pHouse, static_cast<UnitTypeClass*>(pTechnoType), deploy);
+		// 直接获取飞行器类型数量（不处理升级/部署状态）
 	case AbstractType::AircraftType:
 		return pHouse->CountOwnedAndPresent(static_cast<AircraftTypeClass*>(pTechnoType));
 	default:

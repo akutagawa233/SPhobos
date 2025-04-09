@@ -55,12 +55,21 @@ public:
 		static double PowerDelta_ConditionYellow;
 		static double PowerDelta_ConditionRed;
 		static bool CenterPauseMenuBackground;
+
 		static bool SuperWeaponSidebar;
 		static int SuperWeaponSidebar_Interval;
 		static int SuperWeaponSidebar_LeftOffset;
 		static int SuperWeaponSidebar_CameoHeight;
 		static int SuperWeaponSidebar_Max;
 		static int SuperWeaponSidebar_MaxColumns;
+
+		static bool TechTreeSidebar;
+		static int TechTreeSidebar_Interval;
+		static int TechTreeSidebar_LeftOffset;
+		static int TechTreeSidebar_CameoHeight;
+		static int TechTreeSidebar_Max;
+		static int TechTreeSidebar_MaxColumns;
+
 		static bool WeedsCounter_Show;
 		static bool AnchoredToolTips;
 
@@ -69,6 +78,9 @@ public:
 		static const wchar_t* PowerBlackoutLabel;
 		static const wchar_t* TimeLabel;
 		static const wchar_t* HarvesterLabel;
+		static const wchar_t* PrerequisiteLabel;
+		static const wchar_t* PrerequisiteYes;
+        static const wchar_t* PrerequisiteNo;
 		static const wchar_t* ShowBriefingResumeButtonLabel;
 		static const wchar_t* SWShotsFormat;
 		static char ShowBriefingResumeButtonStatusLabel[0x20];

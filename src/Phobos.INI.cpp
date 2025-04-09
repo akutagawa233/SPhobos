@@ -28,17 +28,30 @@ const wchar_t* Phobos::UI::TimeLabel = L"";
 const wchar_t* Phobos::UI::HarvesterLabel = L"";
 const wchar_t* Phobos::UI::ShowBriefingResumeButtonLabel = L"";
 const wchar_t* Phobos::UI::SWShotsFormat = L"";
+const wchar_t* Phobos::UI::PrerequisiteLabel = L"";
+const wchar_t* Phobos::UI::PrerequisiteYes = L"";
+const wchar_t* Phobos::UI::PrerequisiteNo = L"";
+
 char Phobos::UI::ShowBriefingResumeButtonStatusLabel[32];
 bool Phobos::UI::PowerDelta_Show = false;
 double Phobos::UI::PowerDelta_ConditionYellow = 0.75;
 double Phobos::UI::PowerDelta_ConditionRed = 1.0;
 bool Phobos::UI::CenterPauseMenuBackground = false;
+
 bool Phobos::UI::SuperWeaponSidebar = false;
 int Phobos::UI::SuperWeaponSidebar_Interval = 0;
 int Phobos::UI::SuperWeaponSidebar_LeftOffset = 0;
 int Phobos::UI::SuperWeaponSidebar_CameoHeight = 48;
 int Phobos::UI::SuperWeaponSidebar_Max = 0;
 int Phobos::UI::SuperWeaponSidebar_MaxColumns = INT32_MAX;
+
+bool Phobos::UI::TechTreeSidebar = false;
+int Phobos::UI::TechTreeSidebar_Interval = 0;
+int Phobos::UI::TechTreeSidebar_LeftOffset = 0;
+int Phobos::UI::TechTreeSidebar_CameoHeight = 48;
+int Phobos::UI::TechTreeSidebar_Max = 0;
+int Phobos::UI::TechTreeSidebar_MaxColumns = INT32_MAX;
+
 bool Phobos::UI::WeedsCounter_Show = false;
 bool Phobos::UI::AnchoredToolTips = false;
 
@@ -175,6 +188,12 @@ DEFINE_HOOK(0x5FACDF, OptionsClass_LoadSettings_LoadPhobosSettings, 0x5)
 
 		ini_uimd.ReadString(GameStrings::ToolTips, "SWShotsFormat", NONE_STR, Phobos::readBuffer);
 		Phobos::UI::SWShotsFormat = GeneralUtils::LoadStringOrDefault(Phobos::readBuffer, L"Shots: %d"); // ⌚
+		ini_uimd.ReadString(GameStrings::ToolTips, "PrerequisiteLabel", NONE_STR, Phobos::readBuffer);
+		Phobos::UI::PrerequisiteLabel = GeneralUtils::LoadStringOrDefault(Phobos::readBuffer, L"[Prerequisite]");
+		ini_uimd.ReadString(GameStrings::ToolTips, "PrerequisiteYes", NONE_STR, Phobos::readBuffer);
+		Phobos::UI::PrerequisiteYes = GeneralUtils::LoadStringOrDefault(Phobos::readBuffer, L"[V]");
+        ini_uimd.ReadString(GameStrings::ToolTips, "PrerequisiteNo", NONE_STR, Phobos::readBuffer);
+        Phobos::UI::PrerequisiteNo = GeneralUtils::LoadStringOrDefault(Phobos::readBuffer, L"[X]");
 	}
 
 	// Sidebar

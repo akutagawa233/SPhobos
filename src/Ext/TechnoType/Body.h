@@ -29,6 +29,7 @@ public:
 	public:
 		Valueable<bool> HealthBar_Hide;
 		Valueable<CSFText> UIDescription;
+		ValueableVector<TechnoTypeClass*> UIPrerequisite;
 		Valueable<bool> LowSelectionPriority;
 		PhobosFixedString<0x20> GroupAs;
 		Valueable<int> RadarJamRadius;
@@ -393,7 +394,7 @@ public:
 		std::vector<CoordStruct> ExtraTurretOffsets;
 		Valueable<int> BurstPerTurret;
 
-    	Nullable<UnitTypeClass*> Image_ConditionYellow;
+		Nullable<UnitTypeClass*> Image_ConditionYellow;
 		Nullable<UnitTypeClass*> Image_ConditionRed;
 		Nullable<UnitTypeClass*> WaterImage_ConditionYellow;
 		Nullable<UnitTypeClass*> WaterImage_ConditionRed;
@@ -456,6 +457,7 @@ public:
 
 		ExtData(TechnoTypeClass* OwnerObject) : Extension<TechnoTypeClass>(OwnerObject)
 			, HealthBar_Hide { false }
+			, UIPrerequisite {}
 			, UIDescription {}
 			, LowSelectionPriority { false }
 			, GroupAs { NONE_STR }

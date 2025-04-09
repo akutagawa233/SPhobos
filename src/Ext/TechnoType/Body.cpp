@@ -503,6 +503,7 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 
 	this->HealthBar_Hide.Read(exINI, pSection, "HealthBar.Hide");
 	this->UIDescription.Read(exINI, pSection, "UIDescription");
+	this->UIPrerequisite.Read(exINI, pSection, "UIPrerequisite");
 	this->LowSelectionPriority.Read(exINI, pSection, "LowSelectionPriority");
 	this->MindControlRangeLimit.Read(exINI, pSection, "MindControlRangeLimit");
 	this->FactoryPlant_Multiplier.Read(exINI, pSection, "FactoryPlant.Multiplier");
@@ -1070,6 +1071,7 @@ void TechnoTypeExt::ExtData::Serialize(T& Stm)
 	Stm
 		.Process(this->HealthBar_Hide)
 		.Process(this->UIDescription)
+		.Process(this->UIPrerequisite)
 		.Process(this->LowSelectionPriority)
 		.Process(this->MindControlRangeLimit)
 		.Process(this->FactoryPlant_Multiplier)

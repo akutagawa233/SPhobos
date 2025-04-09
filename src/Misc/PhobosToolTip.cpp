@@ -109,6 +109,8 @@ inline int PhobosToolTip::GetPower(TechnoTypeClass* pType) const
 	}
 }
 
+
+
 inline const wchar_t* PhobosToolTip::GetBuffer() const
 {
 	return this->TextBuffer.c_str();
@@ -137,6 +139,41 @@ inline static int TickTimeToSeconds(int tickTime)
 	return tickTime / (60 / GameOptionsClass::Instance.GameSpeed);
 }
 
+inline const wchar_t* PhobosToolTip::GetPrerequisite(TechnoTypeClass* pType) const
+{
+	static std::wstring buffer; // 使用静态变量保持字符串生命周期
+	buffer.clear();
+
+	if (!pType)
+		return buffer.c_str();  // 返回空字符串
+
+	auto const pData = TechnoTypeExt::ExtMap.Find(pType);
+	auto const& UIPrerequisite = pData->UIPrerequisite; // 使用引用避免拷贝
+	//UIPrerequisite如果为空，则返回空字符串
+    if (UIPrerequisite.empty())
+		return buffer.c_str();
+	//建造前提标题
+	std::wostringstream oss;
+	oss << Phobos::UI::PrerequisiteLabel << L"\n";
+	//遍历建造前提列表
+	for (size_t i = 0; i < UIPrerequisite.size(); ++i)
+	{
+		auto const pPrerequisite = UIPrerequisite[i]->UIName;
+		if (const auto count = HouseExt::CountOwnedPresentExt(HouseClass::CurrentPlayer, UIPrerequisite[i], true,true)>0)
+		{
+			//一个字符串,内容为"[X]"
+			oss << Phobos::UI::PrerequisiteYes;
+		}
+		else
+		{
+			oss <<Phobos::UI::PrerequisiteNo;
+		}
+		oss << pPrerequisite << L"\n";
+	}
+
+	buffer = oss.str();
+	return buffer.c_str();
+}
 void PhobosToolTip::HelpText_Techno(TechnoTypeClass* pType)
 {
 	if (!pType)
@@ -165,6 +202,9 @@ void PhobosToolTip::HelpText_Techno(TechnoTypeClass* pType)
 			oss << L"+";
 		oss << std::setw(1) << nPower;
 	}
+
+	if (auto pPre = this->GetPrerequisite(pType))
+		oss << L"\n" << pPre;
 
 	if (auto pDesc = this->GetUIDescription(pData))
 		oss << L"\n" << pDesc;
@@ -539,3 +579,4 @@ DEFINE_HOOK(0x478FDC, CCToolTip_Draw2_FillRect, 0x5)
 //
 //	return 0x479048;
 //}
+//

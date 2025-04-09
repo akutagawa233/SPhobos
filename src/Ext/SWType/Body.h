@@ -54,6 +54,7 @@ public:
 		Valueable<bool> Message_FirerColor;
 
 		Valueable<CSFText> UIDescription;
+		ValueableVector<TechnoTypeClass*>UIPrerequisite;
 		Valueable<int> CameoPriority;
 		DWORD CameoPriority_Houses;
 		ValueableVector<BuildingTypeClass*> LimboDelivery_Types;
@@ -136,6 +137,7 @@ public:
 			, Message_InsufficientFunds {}
 			, Message_ColorScheme { -1 }
 			, Message_FirerColor { false }
+			, UIPrerequisite {}
 			, UIDescription {}
 			, CameoPriority { 0 }
 			, CameoPriority_Houses { 0 }

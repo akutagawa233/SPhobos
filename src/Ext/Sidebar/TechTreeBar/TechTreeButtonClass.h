@@ -17,6 +17,8 @@ class TechTreeButtonClass : public ControlClass
 		bool LaunchSuper() const;
 		void SetColumn(int column);
 	public:
+		static constexpr int StartID = 3000;
+
 		int SuperIndex { -1 };
 		bool IsHovering { false };
 		int ColumnIndex { -1 };

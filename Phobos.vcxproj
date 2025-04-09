@@ -26,6 +26,7 @@
     <ClCompile Include="src\Ext\Sidebar\TechTreeBar\TechTreeButtonClass.cpp" />
     <ClCompile Include="src\Ext\Sidebar\TechTreeBar\TechTreeColumnClass.cpp" />
     <ClCompile Include="src\Ext\Sidebar\TechTreeBar\TechTreeSidebarClass.cpp" />
+    <ClCompile Include="src\Ext\Sidebar\TechTreeBar\ToggleTechTreeButtonClass.cpp" />
     <ClCompile Include="src\Ext\Sidebar\UniqueButton\UniqueTechnoButtonClass.cpp" />
     <ClCompile Include="src\Ext\Sidebar\UniqueButton\UniqueTechnoColumnClass.cpp" />
     <ClCompile Include="src\Ext\Sidebar\SelectedButton\SelectedButtonClass.cpp" />
@@ -36,6 +37,7 @@
     <ClCompile Include="src\Ext\Unit\Hooks.Sinking.cpp" />
     <ClCompile Include="src\Misc\Hooks.AlphaImage.cpp" />
     <ClCompile Include="src\New\Entity\AttachEffectClass.cpp" />
+    <ClCompile Include="src\New\Type\ExtrasTypeClass.cpp" />
     <ClCompile Include="src\New\Type\AttachEffectTypeClass.cpp" />
     <ClCompile Include="src\Commands\AggressiveStance.cpp" />
     <ClCompile Include="src\Commands\Commands.cpp" />
@@ -237,6 +239,7 @@
     <ClInclude Include="src\Ext\Sidebar\TechTreeBar\TechTreeButtonClass.h" />
     <ClInclude Include="src\Ext\Sidebar\TechTreeBar\TechTreeColumnClass.h" />
     <ClInclude Include="src\Ext\Sidebar\TechTreeBar\TechTreeSidebarClass.h" />
+    <ClInclude Include="src\Ext\Sidebar\TechTreeBar\ToggleTechTreeButtonClass.h" />
     <ClInclude Include="src\Ext\Sidebar\UniqueButton\UniqueTechnoButtonClass.h" />
     <ClInclude Include="src\Ext\Sidebar\UniqueButton\UniqueTechnoColumnClass.h" />
     <ClInclude Include="src\Ext\Sidebar\SelectedButton\SelectedButtonClass.h" />
@@ -297,6 +300,7 @@
     <ClInclude Include="src\New\Type\Affiliated\DroppodTypeClass.h" />
     <ClInclude Include="src\New\Type\DigitalDisplayTypeClass.h" />
     <ClInclude Include="src\New\Type\BarTypeClass.h" />
+    <ClInclude Include="src\New\Type\ExtrasTypeClass.h" />
     <ClInclude Include="src\New\Type\RadTypeClass.h" />
     <ClInclude Include="src\New\Type\ShieldTypeClass.h" />
     <ClInclude Include="src\New\Type\LaserTrailTypeClass.h" />
