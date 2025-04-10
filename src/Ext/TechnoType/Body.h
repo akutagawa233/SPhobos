@@ -125,11 +125,12 @@ public:
 		std::vector<std::vector<CoordStruct>> WeaponBurstFLHs;
 		std::vector<std::vector<CoordStruct>> EliteWeaponBurstFLHs;
 		std::vector<CoordStruct> AlternateFLHs;
+		Valueable<bool> AlternateFLH_OnTurret;
 
 		Valueable<bool> DestroyAnim_Random;
 		Valueable<bool> NotHuman_RandomDeathSequence;
 
-		Valueable<InfantryTypeClass*> DefaultDisguise;
+		Valueable<TechnoTypeClass*> DefaultDisguise;
 		Valueable<bool> UseDisguiseMovementSpeed;
 
 		Nullable<int> OpenTopped_RangeBonus;
@@ -241,6 +242,10 @@ public:
 		AEAttachInfoTypeClass AttachEffects;
 
 		Nullable<bool> RecountBurst;
+
+		Valueable<double> Skilled_ReverseSpeed;
+		Valueable<double> Skilled_FaceTargetRange;
+		Valueable<int> Skilled_RetreatDuration;
 
 		ValueableVector<TechnoTypeClass*> BuildLimitGroup_Types;
 		ValueableVector<int> BuildLimitGroup_Nums;
@@ -419,14 +424,15 @@ public:
 		Valueable<CoordStruct> Spawner_RecycleCoord;
 		Valueable<bool> Spawner_RecycleOnTurret;
 
-		Nullable<double> VehicleDamagedSpeedMultiplier_Yellow;
-		Nullable<double> VehicleDamagedSpeedMultiplier_Red;
-
-		Nullable<double> ProneSpeed;
-
 		Nullable<bool> Sinkable;
 		Valueable<bool> Sinkable_SquidGrab;
 		Valueable<int> SinkSpeed;
+
+		Nullable<double> ProneSpeed;
+    	Nullable<double> DamagedSpeed;
+
+		Nullable<AnimTypeClass*> Promote_VeteranAnimation;
+		Nullable<AnimTypeClass*> Promote_EliteAnimation;
 
 		Nullable<BarTypeClass*> HealthBar_BarType;
 		Nullable<BarTypeClass*> ShieldBar_BarType;
@@ -454,6 +460,9 @@ public:
 		Nullable<bool> IgnoredByMouse_ToSelf;
 		Nullable<bool> IgnoredByMouse_ToAlly;
 		Nullable<bool> IgnoredByMouse_ToEnemy;
+
+		Valueable<bool> SuppressKillWeapons;
+		ValueableVector<WeaponTypeClass*> SuppressKillWeapons_Types;
 
 		ExtData(TechnoTypeClass* OwnerObject) : Extension<TechnoTypeClass>(OwnerObject)
 			, HealthBar_Hide { false }
@@ -514,6 +523,7 @@ public:
 			, OreGathering_Tiberiums {}
 			, OreGathering_FramesPerDir {}
 			, LaserTrailData {}
+			, AlternateFLH_OnTurret { true }
 			, DestroyAnim_Random { true }
 			, NotHuman_RandomDeathSequence { false }
 
@@ -670,6 +680,10 @@ public:
 			, AttachEffects {}
 
 			, RecountBurst {}
+
+			, Skilled_ReverseSpeed { 0.85 }
+			, Skilled_FaceTargetRange { 16.0 }
+			, Skilled_RetreatDuration { 150 }
 
 			, BuildLimitGroup_Types {}
 			, BuildLimitGroup_Nums {}
@@ -853,16 +867,23 @@ public:
 			, ClonedAt { }
 			, ClonedAs { }
 
-			, VehicleDamagedSpeedMultiplier_Yellow { }
-			, VehicleDamagedSpeedMultiplier_Red { }
+			, Sinkable { }
+			, Sinkable_SquidGrab { true }
+			, SinkSpeed { 5 }
 
 			, ProneSpeed { }
+			, DamagedSpeed { }
+
+			, SuppressKillWeapons { false }
+			, SuppressKillWeapons_Types { }
 
 			, Sinkable { }
 			, Sinkable_SquidGrab { true }
 			, SinkSpeed { 5 }
 			, HealthBar_BarType { }
 			, ShieldBar_BarType { }
+			, Promote_VeteranAnimation { }
+			, Promote_EliteAnimation { }
 		{ }
 
 		virtual ~ExtData() = default;

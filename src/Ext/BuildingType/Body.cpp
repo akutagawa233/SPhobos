@@ -652,6 +652,7 @@ CellStruct BuildingTypeExt::NearbyPlacingLocation(BuildingTypeClass* pType, Cell
 	// 0x1/0x10: Basic ;0x2/0x20: Building ;0x4/0x40: BaseNormal(Adjacent) ;0x8/0x80: Shroud
 	std::unordered_map<int, int> checkedCells;
 	checkedCells.reserve(53);
+	const auto baseLevel = MapClass::Instance.GetCellAt(cell)->Level;
 
 	// Basic
 	auto canExistHere = [&](CellStruct currentCell)
@@ -673,7 +674,7 @@ CellStruct BuildingTypeExt::NearbyPlacingLocation(BuildingTypeClass* pType, Cell
 
 			if (const auto pCell = MapClass::Instance.TryGetCellAt(checkCell))
 			{
-				if (pCell->CanThisExistHere(pType->SpeedType, pType, pHouse))
+				if (std::abs(pCell->Level - baseLevel) <= 2 && pCell->CanThisExistHere(pType->SpeedType, pType, pHouse))
 				{
 					checkedCells[cellIndex] |= 0x1;
 					continue;
@@ -1312,6 +1313,9 @@ void BuildingTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 
 	this->HasSecondaryRallyPoint.Read(exINI, pSection, "HasSecondaryRallyPoint");
 
+	this->Overpower_KeepOnline.Read(exINI, pSection, "Overpower.KeepOnline");
+	this->Overpower_ChargeWeapon.Read(exINI, pSection, "Overpower.ChargeWeapon");
+
 	if (pThis->NumberOfDocks > 0)
 	{
 		this->AircraftDockingDirs.clear();
@@ -1459,6 +1463,8 @@ void BuildingTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->HasSecondaryRallyPoint)
 		.Process(this->Refinery_UseNormalActiveAnim)
 		.Process(this->CloningFacility)
+		.Process(this->Overpower_KeepOnline)
+		.Process(this->Overpower_ChargeWeapon)
 		;
 }
 
