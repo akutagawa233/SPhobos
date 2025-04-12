@@ -64,3 +64,26 @@ bool ExtrasClass::Save(PhobosStreamWriter& Stm) const
 {
 	return const_cast<ExtrasClass*>(this)->Serialize(Stm);
 }
+
+
+// =============================
+//
+// Is used for DeploysInto/UndeploysInto
+//部署迁移额外属性
+void ExtrasClass::SyncExtrasToAnother(TechnoClass* pFrom, TechnoClass* pTo)
+{
+	const auto pFromExt = TechnoExt::ExtMap.Find(pFrom);
+	const auto pToExt = TechnoExt::ExtMap.Find(pTo);
+
+	if (pFromExt->Extras)
+	{
+		//需要迁移的属性
+		pToExt->CurrentExtrasType = pFromExt->CurrentExtrasType;
+		pToExt->Extras = std::make_unique<ExtrasClass>(pTo);
+		pToExt->Extras->TechnoID = pFromExt->Extras->TechnoID;
+		pToExt->Extras->Available = pFromExt->Extras->Available;
+	}
+
+	if (pFrom->WhatAmI() == AbstractType::Building && pFromExt->Extras)
+		pFromExt->Extras = nullptr;
+}

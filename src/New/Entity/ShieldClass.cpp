@@ -42,10 +42,22 @@ ShieldClass::ShieldClass(TechnoClass* pTechno, bool isAttached)
 	ShieldClass::Array.emplace_back(this);
 }
 
+/**
+ * @brief ShieldClass 类析构函数
+ *
+ * 主要功能：当 ShieldClass 实例被销毁时，自动从静态成员 Array 中
+ * 移除当前实例指针，维护容器有效性防止悬挂指针。
+ *
+ * 关键操作流程：
+ * 1. 在静态数组 Array 中定位当前实例地址
+ * 2. 若存在则安全擦除该元素，保持容器数据完整性
+ */
 ShieldClass::~ShieldClass()
 {
+	// 在静态数组中查找当前实例指针
 	auto it = std::find(ShieldClass::Array.begin(), ShieldClass::Array.end(), this);
 
+	// 安全移除元素：当且仅当指针存在于数组时才执行擦除操作
 	if (it != ShieldClass::Array.end())
 		ShieldClass::Array.erase(it);
 }
@@ -55,12 +67,21 @@ void ShieldClass::UpdateType()
 	this->Type = TechnoExt::ExtMap.Find(this->Techno)->CurrentShieldType;
 }
 
+/**
+ * @brief 处理指针失效时的逻辑，清理关联的动画对象引用
+ *
+ * @param ptr 失效的指针，需要检查是否为 AnimClass 类型
+ * @param removed 标识对象是否被移除（当前代码未使用该参数，可能是预留参数或遗留代码）
+ */
 void ShieldClass::PointerGotInvalid(void* ptr, bool removed)
 {
+	// 检查指针是否为 AnimClass 类型并进行类型转换
 	if (auto const pAnim = abstract_cast<AnimClass*>(static_cast<AbstractClass*>(ptr)))
 	{
+		// 遍历所有护盾实例
 		for (auto pShield : ShieldClass::Array)
 		{
+			// 清理已失效的闲置动画引用
 			if (pAnim == pShield->IdleAnim)
 				pShield->IdleAnim = nullptr;
 		}
@@ -131,25 +152,52 @@ void ShieldClass::SyncShieldToAnother(TechnoClass* pFrom, TechnoClass* pTo)
 		pFromExt->Shield = nullptr;
 }
 
+/**
+ * @brief 检查附加对象的护盾是否处于破损状态
+ *
+ * 本函数通过查询技术对象的扩展数据，判断其关联的护盾是否失效。
+ * 当护盾不存在或护盾生命值小于等于0时视为破损状态。
+ *
+ * @param pAttached 指向要检查的附加对象的指针，应绑定到技术对象上
+ * @return bool
+ *   - true : 护盾不存在或已破损（HP <= 0）
+ *   - false: 护盾存在且未破损，或对象不是有效技术对象
+ */
 bool ShieldClass::ShieldIsBrokenTEvent(ObjectClass* pAttached)
 {
+	// 尝试将附加对象转换为技术对象并查询扩展数据
 	if (auto pTechno = abstract_cast<TechnoClass*>(pAttached))
 	{
 		if (auto pExt = TechnoExt::ExtMap.Find(pTechno))
 		{
+			// 获取护盾实例并判断其有效性及生命状态
 			ShieldClass* pShield = pExt->Shield.get();
 			return !pShield || pShield->HP <= 0;
 		}
 	}
 
+	// 非技术对象或未找到扩展数据时默认返回护盾未破损
 	return false;
 }
 
+/**
+ * @brief 处理护盾接收伤害的逻辑，计算吸收和穿透的伤害量
+ *
+ * @param args 包含伤害相关参数的结构体指针，主要字段：
+ *             - Damage: 输入输出参数，原始伤害值指针
+ *             - WH: 使用的弹头类型
+ *             - DistanceToEpicenter: 到爆炸中心的距离
+ *             - Attacker: 攻击来源单位
+ * @return int 实际穿透护盾的伤害值(可能包含正负值)
+ */
 int ShieldClass::ReceiveDamage(args_ReceiveDamage* args)
 {
+	// 前置条件检查：护盾不存在/处于时间冻结状态/0伤害时直接返回
 	if (!this->HP || this->Temporal || *args->Damage == 0)
 		return *args->Damage;
 
+	/* 处理寄生虫特殊机制：
+	   当负伤害(修复)发生时，清除寄生单位并重置抑制计时器 */
 	// Handle a special case where parasite damages shield but not the unit and unit itself cannot be targeted by repair weapons.
 	if (*args->Damage < 0)
 	{
@@ -164,23 +212,33 @@ int ShieldClass::ReceiveDamage(args_ReceiveDamage* args)
 		}
 	}
 
+	// 获取弹头扩展数据并判断免疫状态
 	auto const pWHExt = WarheadTypeExt::ExtMap.Find(args->WH);
 	bool IC = pWHExt->CanAffectInvulnerable(this->Techno);
 
+	/* 综合免疫判断：
+	   包含无敌状态、单位类型免疫、穿透护盾能力等条件 */
 	if (!IC || CanBePenetrated(args->WH) || this->Techno->GetTechnoType()->Immune || TechnoExt::IsTypeImmune(this->Techno, args->Attacker))
 		return *args->Damage;
 
+	// 伤害计算核心逻辑
 	int nDamage = 0;
 	int shieldDamage = 0;
 	int healthDamage = 0;
 
+	/* 有效伤害处理流程：
+	   1. 计算经过护甲调整后的实际伤害
+	   2. 根据弹头和护盾类型计算吸收/穿透比例
+	   3. 应用伤害范围限制 */
 	if (pWHExt->CanTargetHouse(args->SourceHouse, this->Techno) && !args->WH->Temporal)
 	{
+		// 计算实际伤害（考虑正负值）
 		if (*args->Damage > 0)
 			nDamage = MapClass::GetTotalDamage(*args->Damage, args->WH, this->GetArmorType(), args->DistanceToEpicenter);
 		else
 			nDamage = -MapClass::GetTotalDamage(-*args->Damage, args->WH, this->GetArmorType(), args->DistanceToEpicenter);
 
+		// 计算吸收和穿透伤害
 		bool affectsShield = pWHExt->Shield_AffectTypes.size() <= 0 || pWHExt->Shield_AffectTypes.Contains(this->Type);
 		double absorbPercent = affectsShield ? pWHExt->Shield_AbsorbPercent.Get(this->Type->AbsorbPercent) : this->Type->AbsorbPercent;
 		double passPercent = affectsShield ? pWHExt->Shield_PassPercent.Get(this->Type->PassPercent) : this->Type->PassPercent;
@@ -197,14 +255,20 @@ int ShieldClass::ReceiveDamage(args_ReceiveDamage* args)
 	int maxDmg = static_cast<int>(max * pWHExt->Shield_ReceivedDamage_MaxMultiplier);
 	shieldDamage = Math::clamp(shieldDamage, minDmg, maxDmg);
 
+	// 显示护盾伤害数字
 	if (Phobos::DisplayDamageNumbers && shieldDamage != 0)
 		GeneralUtils::DisplayDamageNumberString(shieldDamage, DamageDisplayType::Shield, this->Techno->GetRenderCoords(), TechnoExt::ExtMap.Find(this->Techno)->DamageNumberOffset);
 
+	/* 正伤害处理分支：
+	   - 重置自愈计时器
+	   - 处理反击和显形逻辑
+	   - 计算护盾破碎或残余生命值 */
 	if (shieldDamage > 0)
 	{
 		bool whModifiersApplied = this->Timers.SelfHealing_WHModifier.InProgress();
 		bool restart = whModifiersApplied ? this->SelfHealing_RestartInCombat_Warhead : this->Type->SelfHealing_RestartInCombat;
 
+		// 自愈系统控制逻辑
 		if (restart)
 		{
 			int delay = whModifiersApplied ? this->SelfHealing_RestartInCombatDelay_Warhead : this->Type->SelfHealing_RestartInCombatDelay;
@@ -221,12 +285,14 @@ int ShieldClass::ReceiveDamage(args_ReceiveDamage* args)
 			}
 		}
 
+		// 触发单位响应行为
 		if (!pWHExt->Nonprovocative)
 			this->ResponseAttack();
 
 		if (pWHExt->DecloakDamagedTargets)
 			this->Techno->Uncloak(false);
 
+		// 计算护盾破碎或残余生命
 		int residueDamage = shieldDamage - this->HP;
 
 		if (residueDamage >= 0)
@@ -240,6 +306,7 @@ int ShieldClass::ReceiveDamage(args_ReceiveDamage* args)
 		}
 		else
 		{
+			// 处理护盾命中特效
 			if (this->Type->HitFlash && pWHExt->Shield_HitFlash)
 			{
 				int size = this->Type->HitFlash_FixedSize.Get((shieldDamage * 2));
@@ -272,6 +339,9 @@ int ShieldClass::ReceiveDamage(args_ReceiveDamage* args)
 			return healthDamage;
 		}
 	}
+	/* 负伤害处理分支（修复护盾）：
+	   - 计算修复量
+	   - 更新护盾生命值 */
 	else if (shieldDamage < 0)
 	{
 		const int nLostHP = this->Type->Strength - this->HP;
@@ -298,23 +368,34 @@ int ShieldClass::ReceiveDamage(args_ReceiveDamage* args)
 		return 0;
 	}
 
+	// 零伤害情况直接返回穿透伤害
 	// else if (nDamage == 0)
 	return healthDamage;
 }
 
+/**
+ * @brief 处理护盾所属单位的受攻击响应
+ * @note 仅在当前玩家拥有该单位时触发相关逻辑：
+ * - 对建筑单位通知所属方基地被攻击
+ * - 对矿车类单位触发被攻击警告事件和语音提示
+ */
 void ShieldClass::ResponseAttack()
 {
+	// 非当前玩家单位不响应攻击事件
 	if (this->Techno->Owner != HouseClass::CurrentPlayer)
 		return;
 
+	// 建筑类单位处理逻辑：通知所属方基地遇袭
 	if (const auto pBld = abstract_cast<BuildingClass*>(this->Techno))
 	{
 		this->Techno->Owner->BuildingUnderAttack(pBld);
 	}
+	// 单位类处理逻辑：矿车遇袭特殊处理
 	else if (const auto pUnit = abstract_cast<UnitClass*>(this->Techno))
 	{
 		if (pUnit->Type->Harvester)
 		{
+			// 创建矿车被攻击的雷达事件并播放语音警报
 			const auto pos = pUnit->GetDestination(pUnit);
 			if (RadarEventClass::Create(RadarEventType::HarvesterAttacked, CellClass::Coord2Cell(pos)))
 				VoxClass::Play(GameStrings::EVA_OreMinerUnderAttack);
@@ -322,78 +403,131 @@ void ShieldClass::ResponseAttack()
 	}
 }
 
+/**
+ * @brief 处理护盾抵消武器命中时的动画效果
+ *
+ * @param pHitAnim 外部传入的命中动画类型指针，允许为空。若为空则使用护盾自身定义的默认命中动画
+ */
 void ShieldClass::WeaponNullifyAnim(AnimTypeClass* pHitAnim)
 {
+	// 当护盾设置为隐藏所有动画时，立即退出处理流程
 	if (this->AreAnimsHidden)
 		return;
 
+	// 优先使用传入的动画类型，若为空指针则使用护盾类型定义的默认动画
 	const auto pAnimType = pHitAnim ? pHitAnim : this->Type->HitAnim;
 
+	// 创建并配置动画对象
 	if (pAnimType)
 	{
+		// 在技术载具坐标处创建动画实例
 		auto const pAnim = GameCreate<AnimClass>(pAnimType, this->Techno->GetCoords());
+		// 设置动画的所属方和特殊属性
 		AnimExt::SetAnimOwnerHouseKind(pAnim, this->Techno->Owner, nullptr, false, true);
+		// 建立动画对象与调用者（技术载具）的关联关系
 		AnimExt::ExtMap.Find(pAnim)->SetInvoker(this->Techno);
 	}
 }
 
+/**
+ * @brief 判断该护盾是否可以被指定武器攻击
+ *
+ * @param pWeapon 指向武器类型对象的指针，可能为空指针
+ * @return bool
+ *   - true : 可以被该武器攻击
+ *   - false: 不能被该武器攻击
+ */
 bool ShieldClass::CanBeTargeted(WeaponTypeClass* pWeapon) const
 {
+	// 空指针检查：无效武器无法攻击任何目标
 	if (!pWeapon)
 		return false;
 
+	// 穿透检查或护盾失效条件：
+	// 1. 武器弹头可以穿透护盾 或 
+	// 2. 护盾当前HP为0
 	if (this->CanBePenetrated(pWeapon->Warhead) || !this->HP)
 		return true;
 
+	// 常规伤害检查：当武器弹头对该类型护甲存在有效伤害时返回true
 	return GeneralUtils::GetWarheadVersusArmor(pWeapon->Warhead, this->GetArmorType()) != 0.0;
 }
 
+/**
+ * @brief 判断当前护盾是否能被特定弹头穿透
+ *
+ * @param pWarhead 指向WarheadTypeClass对象的指针，表示用于攻击的弹头类型
+ * @return bool
+ *   - true : 弹头可以穿透护盾
+ *   - false: 弹头无法穿透护盾或参数无效
+ */
 bool ShieldClass::CanBePenetrated(WarheadTypeClass* pWarhead) const
 {
+	// 参数有效性检查
 	if (!pWarhead)
 		return false;
 
+	// 获取弹头类型的扩展数据
 	const auto pWHExt = WarheadTypeExt::ExtMap.Find(pWarhead);
 
+	// 获取允许穿透的护盾类型集合（使用Shield_AffectTypes作为默认值）
 	const auto affectedTypes = pWHExt->Shield_Penetrate_Types.GetElements(pWHExt->Shield_AffectTypes);
 
+	// 类型过滤检查：存在定义列表且不包含当前护盾类型时拒绝穿透
 	if (affectedTypes.size() > 0 && !affectedTypes.contains(this->Type))
 		return false;
 
+	// 特殊效果处理：当弹头具有精神控制效果时
 	if (pWarhead->Psychedelic)
-		return !this->Type->ImmuneToBerserk;
+		return !this->Type->ImmuneToBerserk; // 根据是否免疫狂暴效果返回相反结果
 
+	// 常规穿透判断：返回扩展数据中定义的穿透标志
 	return pWHExt->Shield_Penetrate;
 }
 
+/**
+ * @brief 处理护盾的时间停滞(时空免疫)AI逻辑
+ *
+ * 当护盾进入时空停滞状态时：
+ * 1. 暂停对应的计时器(复活/自愈)
+ * 2. 执行隐形检测
+ * 3. 根据类型配置处理关联动画的状态
+ *
+ * @note 该函数没有参数和返回值，作用于ShieldClass实例
+ */
 void ShieldClass::AI_Temporal()
 {
+	// 进入时空停滞状态的主逻辑
 	if (!this->Temporal)
 	{
-		this->Temporal = true;
+		this->Temporal = true; // 标记时空状态
 
+		// 根据当前生命值选择要暂停的计时器
 		const auto timer = (this->HP <= 0) ? &this->Timers.Respawn : &this->Timers.SelfHealing;
-		timer->Pause();
+		timer->Pause();// 暂停选中的计时器
 
+		// 执行隐形状态检测
 		this->CloakCheck();
 
+		// 处理空闲动画的状态调整
 		if (this->IdleAnim)
 		{
+			// 根据动画配置类型处理不同状态
 			switch (this->Type->IdleAnim_TemporalAction)
 			{
-			case AttachedAnimFlag::Hides:
+			case AttachedAnimFlag::Hides:// 完全隐藏动画
 				this->KillAnim();
 				break;
 
-			case AttachedAnimFlag::Temporal:
+			case AttachedAnimFlag::Temporal:// 标记动画处于时空状态
 				this->IdleAnim->UnderTemporal = true;
 				break;
 
-			case AttachedAnimFlag::Paused:
+			case AttachedAnimFlag::Paused:// 暂停动画播放
 				this->IdleAnim->Pause();
 				break;
 
-			case AttachedAnimFlag::PausedTemporal:
+			case AttachedAnimFlag::PausedTemporal:// 暂停并标记时空状态
 				this->IdleAnim->Pause();
 				this->IdleAnim->UnderTemporal = true;
 				break;
@@ -402,65 +536,94 @@ void ShieldClass::AI_Temporal()
 	}
 }
 
+/**
+ * @brief 护盾AI逻辑主控函数
+ *
+ * 管理单位护盾的状态更新和逻辑处理，包含状态检查、护盾更新、
+ * 动画控制、自愈和重生等核心功能。本函数每帧调用。
+ */
 void ShieldClass::AI()
 {
+	// 检查单位是否处于无效状态（被传送/无法移动/被运输等）
 	if (!this->Techno || this->Techno->InLimbo || this->Techno->IsImmobilized || this->Techno->Transporter)
 		return;
 
+	// 处理单位死亡/损毁状态下的护盾清理
 	if (this->Techno->Health <= 0 || !this->Techno->IsAlive || this->Techno->IsSinking)
 	{
 		if (auto pTechnoExt = TechnoExt::ExtMap.Find(this->Techno))
 		{
-			pTechnoExt->Shield = nullptr;
+			pTechnoExt->Shield = nullptr;// 解除护盾与单位的关联
 			return;
 		}
 	}
 
+	// 执行护盾类型转换检查（如遭遇EMP等特殊状态）
 	if (this->ConvertCheck())
 		return;
 
-	this->UpdateType();
-	this->CloakCheck();
+	// 更新护盾类型和隐形状态检测
+	this->UpdateType();// 根据单位类型更新护盾参数
+	this->CloakCheck();// 检测单位隐形状态对护盾的影响
 
-	if (!this->Available)
+	if (!this->Available)// 护盾当前不可用
 		return;
 
+	// 处理时间效应影响（如时间暂停/倒流）
 	this->TemporalCheck();
 
-	if (this->Temporal)
+	if (this->Temporal)// 处于时间停滞状态
 		return;
 
-	this->OnlineCheck();
-	this->RespawnShield();
-	this->SelfHealing();
+	// 核心护盾运行逻辑
+	this->OnlineCheck();// 检测护盾在线状态
+	this->RespawnShield();// 处理护盾重生逻辑
+	this->SelfHealing();// 执行护盾自愈功能
 
+	// 动画系统控制
 	double ratio = this->Techno->GetHealthPercentage();
 
 	if (!this->AreAnimsHidden)
 	{
+		// 生命值比例变化时更新动画状态
 		if (GeneralUtils::HasHealthRatioThresholdChanged(LastTechnoHealthRatio, ratio))
 			UpdateIdleAnim();
 
+		// 创建护盾激活时的动画效果
 		if (!this->Temporal && this->Online && (this->HP > 0 && this->Techno->Health > 0))
 			this->CreateAnim();
 	}
 
+	// 计时器状态维护
 	if (this->Timers.Respawn_WHModifier.Completed())
 		this->Timers.Respawn_WHModifier.Stop();
 
 	if (this->Timers.SelfHealing_WHModifier.Completed())
 		this->Timers.SelfHealing_WHModifier.Stop();
 
+	// 记录当前生命值比例用于下次比较
 	this->LastTechnoHealthRatio = ratio;
 }
 
 // The animation is automatically destroyed when the associated unit receives the isCloak statute.
 // Therefore, we must zero out the invalid pointer
+/**
+ * @brief 检查并处理护盾动画在单位隐形时的状态
+ *
+ * 当关联单位进入隐形状态时，强制终止正在播放的闲置动画。
+ * 该函数会在单位隐形状态变更时被调用，用于维护护盾动画与隐形状态的同步。
+ */
 void ShieldClass::CloakCheck()
 {
+	// 获取单位的当前隐形状态
 	const auto cloakState = this->Techno->CloakState;
+	// 更新护盾的隐形标记状态 (包含正在隐形中的过渡状态)
 	this->Cloak = cloakState == CloakState::Cloaked || cloakState == CloakState::Cloaking;
 
+	/* 当满足以下条件时强制终止动画：
+	 * 1. 单位处于/正在进入隐形状态
+	 * 2. 存在正在播放的闲置动画
+	 * 3. 该动画类型被标记为需要在隐形时分离 */
 	if (this->Cloak && this->IdleAnim && AnimTypeExt::ExtMap.Find(this->IdleAnim->Type)->DetachOnCloak)
 		this->KillAnim();
 }

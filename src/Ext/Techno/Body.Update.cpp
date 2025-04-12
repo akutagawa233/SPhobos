@@ -1279,6 +1279,7 @@ void TechnoExt::ExtData::UpdateSelfOwnedAttachEffects()
 }
 
 // Updates CumulativeAnimations AE's on techno.
+//更新AE动画
 void TechnoExt::ExtData::UpdateCumulativeAttachEffects(AttachEffectTypeClass* pAttachEffectType, AttachEffectClass* pRemoved)
 {
 	AttachEffectClass* pAELargestDuration = nullptr;

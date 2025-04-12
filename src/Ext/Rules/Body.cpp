@@ -11,6 +11,7 @@
 #include <New/Type/AttachEffectTypeClass.h>
 #include <Utilities/Patch.h>
 #include <New/Type/BarTypeClass.h>
+#include <New/Type/ExtrasTypeClass.h>
 
 std::unique_ptr<RulesExt::ExtData> RulesExt::Data = nullptr;
 
@@ -29,6 +30,7 @@ void RulesExt::LoadFromINIFile(RulesClass* pThis, CCINIClass* pINI)
 	Data->LoadFromINI(pINI);
 }
 
+//加载游戏规则扩展数据
 void RulesExt::LoadBeforeTypeData(RulesClass* pThis, CCINIClass* pINI)
 {
 	DigitalDisplayTypeClass::LoadFromINIList(pINI);
@@ -37,6 +39,7 @@ void RulesExt::LoadBeforeTypeData(RulesClass* pThis, CCINIClass* pINI)
 	LaserTrailTypeClass::LoadFromINIList(&CCINIClass::INI_Art);
 	AttachEffectTypeClass::LoadFromINIList(pINI);
 	BarTypeClass::LoadFromINIList(pINI);
+	ExtrasTypeClass::LoadFromINIList(pINI);
 
 	Data->LoadBeforeTypeData(pThis, pINI);
 }

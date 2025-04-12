@@ -13,6 +13,7 @@
 #include <New/Type/DigitalDisplayTypeClass.h>
 #include <New/Type/Affiliated/DroppodTypeClass.h>
 #include <New/Type/BarTypeClass.h>
+#include <New/Type/ExtrasTypeClass.h>
 
 class Matrix3D;
 
@@ -464,6 +465,8 @@ public:
 		Valueable<bool> SuppressKillWeapons;
 		ValueableVector<WeaponTypeClass*> SuppressKillWeapons_Types;
 
+		ValueableVector<ExtrasTypeClass*> ExtrasType;
+
 		ExtData(TechnoTypeClass* OwnerObject) : Extension<TechnoTypeClass>(OwnerObject)
 			, HealthBar_Hide { false }
 			, UIPrerequisite {}
@@ -877,13 +880,12 @@ public:
 			, SuppressKillWeapons { false }
 			, SuppressKillWeapons_Types { }
 
-			, Sinkable { }
-			, Sinkable_SquidGrab { true }
-			, SinkSpeed { 5 }
 			, HealthBar_BarType { }
 			, ShieldBar_BarType { }
 			, Promote_VeteranAnimation { }
 			, Promote_EliteAnimation { }
+
+			, ExtrasType { }
 		{ }
 
 		virtual ~ExtData() = default;
@@ -932,6 +934,7 @@ public:
 
 	static int __fastcall RequirementsMetExtraCheck(void* pAresHouseExt, void* _, TechnoTypeClass* pType);
 	static CanBuildResult CheckAlwaysExistCameo(TechnoTypeClass* pType, CanBuildResult canBuild);
+	static CanBuildResult ExtrasPrerequisite(TechnoTypeClass* pType, CanBuildResult canBuild);
 
 	// Ares 0.A
 	static const char* GetSelectionGroupID(ObjectTypeClass* pType);

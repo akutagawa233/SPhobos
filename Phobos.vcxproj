@@ -37,6 +37,7 @@
     <ClCompile Include="src\Ext\Unit\Hooks.Sinking.cpp" />
     <ClCompile Include="src\Misc\Hooks.AlphaImage.cpp" />
     <ClCompile Include="src\New\Entity\AttachEffectClass.cpp" />
+    <ClCompile Include="src\New\Entity\ExtrasClass.cpp" />
     <ClCompile Include="src\New\Type\ExtrasTypeClass.cpp" />
     <ClCompile Include="src\New\Type\AttachEffectTypeClass.cpp" />
     <ClCompile Include="src\Commands\AggressiveStance.cpp" />
@@ -248,6 +249,7 @@
     <ClInclude Include="src\Ext\Sidebar\SelectedButton\SelectedColumnClass.h" />
     <ClInclude Include="src\Ext\Sidebar\SelectedButton\SelectedInfoClass.h" />
     <ClInclude Include="src\New\Entity\AttachEffectClass.h" />
+    <ClInclude Include="src\New\Entity\ExtrasClass.h" />
     <ClInclude Include="src\New\Type\AttachEffectTypeClass.h" />
     <ClInclude Include="src\Commands\SelectCaptured.h" />
     <ClInclude Include="src\Commands\AggressiveStance.h" />

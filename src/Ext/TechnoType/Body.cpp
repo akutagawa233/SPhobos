@@ -22,6 +22,7 @@ TechnoTypeExt::ExtContainer TechnoTypeExt::ExtMap;
 void TechnoTypeExt::ExtData::Initialize()
 {
 	this->ShieldType = ShieldTypeClass::FindOrAllocate(NONE_STR);
+	//this->ExtrasType = ExtrasTypeClass::FindOrAllocate(NONE_STR);
 }
 
 void TechnoTypeExt::ExtData::ApplyTurretOffset(Matrix3D* mtx, double factor, int turIdx)
@@ -401,34 +402,53 @@ int __fastcall TechnoTypeExt::RequirementsMetExtraCheck(void* pAresHouseExt, voi
 	return result;
 }
 
+/**
+ * @brief 检查并处理单位类型在侧边栏图标（Cameo）的显示状态
+ *
+ * 该函数根据当前玩家的建造条件，判断是否应强制显示不可建造的灰色图标，
+ * 并在状态变化时触发侧边栏重绘。主要处理替代单位检测和特殊建造状态逻辑。
+ *
+ * @param pType 需要检查的单位类型指针
+ * @param canBuild 当前默认的建造能力判定结果
+ * @return CanBuildResult 调整后的建造能力判定结果
+ */
 CanBuildResult TechnoTypeExt::CheckAlwaysExistCameo(TechnoTypeClass* pType, CanBuildResult canBuild)
 {
+	// 获取当前单位类型的扩展数据
 	const auto pTypeExt = TechnoTypeExt::ExtMap.Find(pType);
+	// 定义侧边栏强制重绘逻辑的lambda
 	auto ForceRedrawSidebar = [pType]()
 	{
+		// 获取当前单位类型在侧边栏的标签页索引
 		const auto tabIndex = SidebarClass::GetObjectTabIdx(pType->WhatAmI(), pType->GetArrayIndex(), 0);
 		auto& sidebar = SidebarClass::Instance;
 
+		// 仅在当前激活标签页时触发重绘
 		if (tabIndex != sidebar.ActiveTabIndex)
 			return;
 
+		// 设置所有重绘标记并立即执行重绘
 		sidebar.SidebarNeedsRedraw = true;
 		sidebar.SidebarBackgroundNeedsRedraw = true; // Necessary
 		sidebar.Tabs[tabIndex].NeedsRedraw = true;
 		sidebar.RedrawSidebar(0);
 	};
 
+	// 处理不可建造状态的特殊逻辑
 	if (canBuild == CanBuildResult::Unbuildable)
 	{
 		const auto pCurrent = HouseClass::CurrentPlayer;
+		// 定义检查替代单位的lambda
 		auto CheckOverrideTechnos = [pCurrent, pTypeExt]()
 		{
+			// 遍历所有替代单位类型
 			const auto& pAuxTypes = pTypeExt->Cameo_OverrideTechnos;
 
 			if (pAuxTypes.size())
 			{
 				for (const auto& pAuxType : pAuxTypes)
 				{
+					// 检查玩家是否拥有任意替代单位
 					if (HouseExt::CountOwnedPresentExt(pCurrent, pAuxType, true, true))
 						return true;
 				}
@@ -437,12 +457,15 @@ CanBuildResult TechnoTypeExt::CheckAlwaysExistCameo(TechnoTypeClass* pType, CanB
 			return false;
 		};
 
+		// 条件满足时需要显示灰色图标
 		if (pTypeExt->IsMetTheEssentialConditions && (CheckOverrideTechnos() || HouseExt::CheckOwnerBitfieldForCurrentPlayer(pType)))
 		{
 			if (!pTypeExt->IsGreyCameoForCurrentPlayer)
 			{
+				// 设置状态标记并触发侧边栏重绘
 				pTypeExt->IsGreyCameoForCurrentPlayer = true;
 				ForceRedrawSidebar();
+				// 处理建筑类单位的特殊逻辑
 				auto buildCat = BuildCat::DontCare;
 
 				if (const auto pBldType = abstract_cast<BuildingTypeClass*>(pType))
@@ -451,6 +474,7 @@ CanBuildResult TechnoTypeExt::CheckAlwaysExistCameo(TechnoTypeClass* pType, CanB
 					auto& display = DisplayClass::Instance;
 					const auto pCurType = abstract_cast<BuildingTypeClass*>(display.CurrentBuildingType);
 
+					// 重置当前正在放置的建筑状态
 					if (!RulesExt::Global()->ExtendedBuildingPlacing || !pCurType || BuildingTypeExt::IsSameBuildingType(pBldType, pCurType))
 					{
 						display.SetActiveFoundation(nullptr);
@@ -460,6 +484,7 @@ CanBuildResult TechnoTypeExt::CheckAlwaysExistCameo(TechnoTypeClass* pType, CanB
 					}
 				}
 
+				// 触发放弃生产事件
 				if (pCurrent->GetPrimaryFactory(pType->WhatAmI(), pType->Naval, buildCat))
 				{
 					const EventClass event
@@ -474,11 +499,14 @@ CanBuildResult TechnoTypeExt::CheckAlwaysExistCameo(TechnoTypeClass* pType, CanB
 				}
 			}
 
+			// 转换为临时不可建造状态
 			canBuild = CanBuildResult::TemporarilyUnbuildable;
 		}
 	}
+	// 处理状态恢复逻辑
 	else if (pTypeExt->IsGreyCameoForCurrentPlayer)
 	{
+		// 重置状态标记并播放提示音效
 		pTypeExt->IsGreyCameoForCurrentPlayer = false;
 		pTypeExt->IsGreyCameoAbandonedProduct = false;
 		VoxClass::Play(&Make_Global<const char>(0x83FA64)); // 0x83FA64 -> EVA_NewConstructionOptions
@@ -486,6 +514,44 @@ CanBuildResult TechnoTypeExt::CheckAlwaysExistCameo(TechnoTypeClass* pType, CanB
 	}
 
 	return canBuild;
+}
+
+//函数ExtrasPrerequisite
+CanBuildResult TechnoTypeExt::ExtrasPrerequisite(TechnoTypeClass* pType, CanBuildResult canBuild)
+{
+	// 获取当前单位类型的扩展数据
+	const auto pTypeExt = TechnoTypeExt::ExtMap.Find(pType);
+	auto pcanBuild = canBuild;
+	auto ForceRedrawSidebar = [pType]()
+		{
+			// 获取当前单位类型在侧边栏的标签页索引
+			const auto tabIndex = SidebarClass::GetObjectTabIdx(pType->WhatAmI(), pType->GetArrayIndex(), 0);
+			auto& sidebar = SidebarClass::Instance;
+
+			// 仅在当前激活标签页时触发重绘
+			if (tabIndex != sidebar.ActiveTabIndex)
+				return;
+
+			// 设置所有重绘标记并立即执行重绘
+			sidebar.SidebarNeedsRedraw = true;
+			sidebar.SidebarBackgroundNeedsRedraw = true; // Necessary
+			sidebar.Tabs[tabIndex].NeedsRedraw = true;
+			sidebar.RedrawSidebar(0);
+		};
+	//处理额外建造条件属性
+		const auto pCurrent = HouseClass::CurrentPlayer;
+		const auto& pExtrasTypes = pTypeExt->ExtrasType;
+
+		if (!pExtrasTypes.empty())
+		{
+			for (const auto& pExtrasType : pExtrasTypes)
+			{
+				pcanBuild = pExtrasType->SetPrerequisite(pType, canBuild);
+			}
+			
+		}
+
+	return pcanBuild;
 }
 
 // =============================
@@ -875,6 +941,7 @@ void TechnoTypeExt::ExtData::LoadFromINIFile(CCINIClass* const pINI)
 	this->Promote_VeteranAnimation.Read(exINI, pSection, "Promote.VeteranAnimation");
 	this->Promote_EliteAnimation.Read(exINI, pSection, "Promote.EliteAnimation");
 
+	this->ExtrasType.Read(exINI, pSection, "ExtrasType");
 	// Ares 0.2
 	this->RadarJamRadius.Read(exINI, pSection, "RadarJamRadius");
 	this->Cloneable.Read(exINI, pSection, "Cloneable");
@@ -1482,9 +1549,6 @@ void TechnoTypeExt::ExtData::Serialize(T& Stm)
 		.Process(this->Cloneable)
 		.Process(this->ClonedAt)
 		.Process(this->ClonedAs)
-
-		.Process(this->VehicleDamagedSpeedMultiplier_Yellow)
-		.Process(this->VehicleDamagedSpeedMultiplier_Red)
 
 		.Process(this->ProneSpeed)
 

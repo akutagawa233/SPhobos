@@ -33,6 +33,7 @@
 #include <New/Type/LaserTrailTypeClass.h>
 #include <New/Type/DigitalDisplayTypeClass.h>
 #include <New/Type/BarTypeClass.h>
+#include <New/Type/ExtrasTypeClass.h>
 
 #include <utility>
 
@@ -231,7 +232,8 @@ using PhobosTypeRegistry = TypeRegistry <
 	DigitalDisplayTypeClass,
 	AttachEffectTypeClass,
 	AttachEffectClass,
-	BarTypeClass
+	BarTypeClass,
+	ExtrasTypeClass
 	// other classes
 > ;
 

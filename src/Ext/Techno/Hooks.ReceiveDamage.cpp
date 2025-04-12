@@ -18,23 +18,38 @@ namespace ReceiveDamageTemp
 }
 
 // #issue 88 : shield logic
+/**
+ * @brief 处理单位受到伤害时的护盾逻辑和战斗警报系统
+ *
+ * 该钩子函数用于在单位受到伤害时处理以下逻辑：
+ * 1. 伤害倍率计算(敌我识别)
+ * 2. 战斗警报触发(雷达事件和语音提示)
+ * 3. 护盾系统伤害吸收
+ *
+ * @param ECX 寄存器参数，指向当前TechnoClass对象
+ * @return 始终返回0，保持原游戏函数行为
+ */
 DEFINE_HOOK(0x701900, TechnoClass_ReceiveDamage_Shield, 0x6)
 {
-	GET(TechnoClass*, pThis, ECX);
-	LEA_STACK(args_ReceiveDamage*, args, 0x4);
+	GET(TechnoClass*, pThis, ECX);// 获取当前受伤害的单位对象
+	LEA_STACK(args_ReceiveDamage*, args, 0x4);// 获取伤害参数结构体指针
 
+	// 初始化扩展数据
 	const auto pRules = RulesExt::Global();
 	const auto pExt = TechnoExt::ExtMap.Find(pThis);
 	const auto pTypeExt = pExt->TypeExtData;
 	const auto pType = pTypeExt->OwnerObject();
 	const auto pWHExt = WarheadTypeExt::ExtMap.Find(args->WH);
 
+	// 获取阵营关系
 	const auto pSourceHouse = args->SourceHouse;
 	const auto pTargetHouse = pThis->Owner;
 
 	// Calculate Damage Multiplier
+	/* 伤害倍率计算模块 */
 	if (!args->IgnoreDefenses && *args->Damage)
 	{
+		// 根据阵营关系选择伤害倍率
 		double multiplier = 1.0;
 
 		if (!pSourceHouse || !pTargetHouse || !pSourceHouse->IsAlliedWith(pTargetHouse))
@@ -44,6 +59,7 @@ DEFINE_HOOK(0x701900, TechnoClass_ReceiveDamage_Shield, 0x6)
 		else
 			multiplier = pWHExt->DamageOwnerMultiplier.Get(pRules->DamageOwnerMultiplier);
 
+		// 应用非1倍率的伤害计算
 		if (multiplier != 1.0)
 		{
 			const auto sgnDamage = *args->Damage > 0 ? 1 : -1;
@@ -53,25 +69,32 @@ DEFINE_HOOK(0x701900, TechnoClass_ReceiveDamage_Shield, 0x6)
 	}
 
 	// Raise Combat Alert
+	/* 战斗警报触发系统 */
 	if (*args->Damage && (MapClass::GetTotalDamage(*args->Damage, args->WH, pType->Armor, args->DistanceToEpicenter) > 0))
 	{
+		// 定义警报触发lambda函数
 		auto raiseCombatAlert = [&]()
 		{
+			// 检查基础触发条件
 			if (!pTargetHouse->IsControlledByCurrentPlayer() || (pRules->CombatAlert_SuppressIfAllyDamage && pTargetHouse->IsAlliedWith(pSourceHouse)))
 				return;
 
 			const auto pHouseExt = HouseExt::ExtMap.Find(pTargetHouse);
 
+			// 检查计时器和弹头抑制设置
 			if (pHouseExt->CombatAlertTimer.HasTimeLeft() || pWHExt->CombatAlert_Suppress.Get(!pWHExt->Malicious || pWHExt->Nonprovocative))
 				return;
+			// 检查单位类型是否启用警报
 			else if (!pTypeExt->CombatAlert.Get(pRules->CombatAlert_Default.Get(!pType->Insignificant && !pType->Spawned)) || !pThis->IsInPlayfield)
 				return;
 
+			// 建筑类型特殊处理
 			const auto pBuilding = abstract_cast<BuildingClass*>(pThis);
 
 			if (pRules->CombatAlert_IgnoreBuilding && pBuilding && !pTypeExt->CombatAlert_NotBuilding.Get(pBuilding->Type->IsVehicle()))
 				return;
 
+			// 屏幕内单位警报抑制
 			const auto coordInMap = pThis->GetCoords();
 
 			if (pRules->CombatAlert_SuppressIfInScreen)
@@ -84,8 +107,10 @@ DEFINE_HOOK(0x701900, TechnoClass_ReceiveDamage_Shield, 0x6)
 					return;
 			}
 
+			// 触发雷达事件
 			pHouseExt->CombatAlertTimer.Start(pRules->CombatAlert_Interval);
 			RadarEventClass::Create(RadarEventType::Combat, CellClass::Coord2Cell(coordInMap));
+			// 语音提示处理逻辑
 			int index = -1;
 
 			if (!pRules->CombatAlert_MakeAVoice) // No one want to play two sound at a time, I guess?
@@ -101,14 +126,17 @@ DEFINE_HOOK(0x701900, TechnoClass_ReceiveDamage_Shield, 0x6)
 				VoxClass::PlayIndex(index);
 		};
 
+		// 执行警报触发
 		if (pRules->CombatAlert)
 			raiseCombatAlert();
 
+		// 更新最后受伤帧数
 		if (pWHExt->CanTargetHouse(pSourceHouse, pThis))
 			pExt->LastHurtFrame = Unsorted::CurrentFrame;
 	}
 
 	// Shield Receive Damage
+	/* 护盾伤害处理模块 */
 	if (!args->IgnoreDefenses)
 	{
 		if (const auto pShieldData = pExt->Shield.get())
@@ -116,8 +144,10 @@ DEFINE_HOOK(0x701900, TechnoClass_ReceiveDamage_Shield, 0x6)
 			if (!pShieldData->IsActive())
 				return 0;
 
+			// 处理护盾吸收伤害
 			int nDamageLeft = pShieldData->ReceiveDamage(args);
 
+			// 更新剩余伤害值
 			if (nDamageLeft >= 0)
 			{
 				*args->Damage = nDamageLeft;
@@ -126,6 +156,7 @@ DEFINE_HOOK(0x701900, TechnoClass_ReceiveDamage_Shield, 0x6)
 					pTag->RaiseEvent((TriggerEvent)PhobosTriggerEvent::ShieldBroken, pThis, CellStruct::Empty);
 			}
 
+			// 设置低伤害检查标志
 			if (nDamageLeft == 0)
 				ReceiveDamageTemp::SkipLowDamageCheck = true;
 		}

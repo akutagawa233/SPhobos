@@ -9,6 +9,7 @@
 #include <New/Entity/ShieldClass.h>
 #include <New/Entity/LaserTrailClass.h>
 #include <New/Entity/AttachEffectClass.h>
+#include <New/Entity/ExtrasClass.h>
 
 class BulletClass;
 
@@ -90,6 +91,9 @@ public:
 		bool AggressiveStance;                  // Aggressive stance that will auto target buildings
 		DWORD PlayerAssignedLastTarget;
 
+		std::unique_ptr<ExtrasClass> Extras;
+		ExtrasTypeClass* CurrentExtrasType;
+
 		ExtData(TechnoClass* OwnerObject) : Extension<TechnoClass>(OwnerObject)
 			, TypeExtData { nullptr }
 			, Shield {}
@@ -153,6 +157,9 @@ public:
 			, KeepTargetOnMove { false }
 			, LastSensorsMapCoords { CellStruct::Empty }
 			, PlayerAssignedLastTarget { 0xFFFFFFFF }
+
+			, Extras {}
+			, CurrentExtrasType { nullptr }
 		{ }
 
 		void OnEarlyUpdate();
@@ -181,6 +188,7 @@ public:
 		void UpdateRearmInTemporal();
 		void InitializeLaserTrails();
 		void InitializeAttachEffects();
+		void InitializeExtras();
 		void UpdateSelfOwnedAttachEffects();
 		bool HasAttachedEffects(std::vector<AttachEffectTypeClass*> attachEffectTypes, bool requireAll, bool ignoreSameSource, TechnoClass* pInvoker, AbstractClass* pSource, std::vector<int> const* minCounts, std::vector<int> const* maxCounts) const;
 		int GetAttachedEffectCumulativeCount(AttachEffectTypeClass* pAttachEffectType, bool ignoreSameSource = false, TechnoClass* pInvoker = nullptr, AbstractClass* pSource = nullptr) const;

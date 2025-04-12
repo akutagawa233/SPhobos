@@ -144,28 +144,64 @@ CoordStruct TechnoExt::GetSimpleFLH(InfantryClass* pThis, int weaponIndex, bool&
 	return FLH;
 }
 
+//初始化数显
 void TechnoExt::ExtData::InitializeDisplayInfo()
 {
+	// 获取宿主对象并初始化主武器指针
 	const auto pThis = this->OwnerObject();
 	const auto pPrimary = pThis->GetWeapon(0)->WeaponType;
 
+	/* 设置再装填时间逻辑：
+	1. 当存在有效主武器且单位具备对地攻击能力时，使用主武器的射速
+	2. 否则检查副武器有效性，使用副武器的射速 */
 	if (pPrimary && pThis->GetTechnoType()->LandTargeting != LandTargetingType::Land_Not_OK)
 		pThis->RearmTimer.TimeLeft = pPrimary->ROF;
 	else if (const auto pSecondary = pThis->GetWeapon(1)->WeaponType)
 		pThis->RearmTimer.TimeLeft = pSecondary->ROF;
 
+	// 设置计时器起始时间，确保起始值不超过-2且不大于当前倒计时时间的负值
 	pThis->RearmTimer.StartTime = Math::min(-2, -pThis->RearmTimer.TimeLeft);
 }
 
+//初始化AE
 void TechnoExt::ExtData::InitializeAttachEffects()
 {
+	// 获取关联的类型扩展数据并进行有效性检查
 	if (auto pTypeExt = this->TypeExtData)
 	{
+		// 检查附加效果类型列表是否为空，避免无效操作
 		if (pTypeExt->AttachEffects.AttachTypes.size() < 1)
 			return;
 
+		// 获取宿主对象并执行额外属性的附加
 		auto const pThis = this->OwnerObject();
+		/* 调用额外属性附加系统：
+		 * - 参数1: 效果宿主对象（被附加效果的目标）
+		 * - 参数2: 效果来源对象（触发效果的主体）
+		 * - 参数3&4: 此处重复使用宿主对象，可能表示持续时间和覆盖规则的控制方
+		 * - 参数5: 包含附加效果配置数据的结构体 */
 		AttachEffectClass::Attach(pThis, pThis->Owner, pThis, pThis, pTypeExt->AttachEffects);
+	}
+}
+
+//初始化AE
+void TechnoExt::ExtData::InitializeExtras()
+{
+	// 获取关联的类型扩展数据并进行有效性检查
+	if (auto pTypeExt = this->TypeExtData)
+	{
+		// 检查额外属性类型列表是否为空，避免无效操作
+		if (pTypeExt->ExtrasType.size() < 1)
+			return;
+
+		// 获取宿主对象并执行效果附加
+		auto const pThis = this->OwnerObject();
+		/* 调用核心附加效果系统：
+		 * - 参数1: 效果宿主对象（被附加效果的目标）
+		 * - 参数2: 效果来源对象（触发效果的主体）
+		 * - 参数3&4: 此处重复使用宿主对象，可能表示持续时间和覆盖规则的控制方
+		 * - 参数5: 包含附加效果配置数据的结构体 */
+		//ExtrasClass::Attach(pThis, pThis->Owner, pThis, pThis, pTypeExt->ExtrasType);
 	}
 }
 

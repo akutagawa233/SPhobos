@@ -85,6 +85,21 @@ CanBuildResult CheckBuildLimit(HouseClass const* const pHouse, BuildingTypeClass
 	return Remaining > 0 ? CanBuildResult::Buildable : CanBuildResult::TemporarilyUnbuildable;
 }
 
+/**
+ * @brief 检查当前阵营是否可建造指定类型单位/建筑，并处理升级建筑的交互逻辑
+ *
+ * @param pThis            当前阵营的指针
+ * @param pItem            要检查的技术类型(单位/建筑类型)
+ * @param buildLimitOnly   是否仅检查建造数量限制
+ * @param includeInProduction 是否包含正在生产队列中的单位
+ * @return CanBuildResult  建造能力检查结果
+ *
+ * 功能说明：
+ * 该函数在Ares的建造检查基础上扩展了：
+ * 1. 升级建筑的建造限制检查
+ * 2. 建造限制组的全局检查
+ * 3. 始终存在图标的特殊处理
+ */
 DEFINE_HOOK(0x4F8361, HouseClass_CanBuild_UpgradesInteraction, 0x5)
 {
 	GET(HouseClass* const, pThis, ECX);
@@ -93,8 +108,11 @@ DEFINE_HOOK(0x4F8361, HouseClass_CanBuild_UpgradesInteraction, 0x5)
 	GET_STACK(const bool, includeInProduction, 0xC);
 	GET(CanBuildResult, canBuild, EAX); // resultOfAres
 
+	// 处理可升级建筑的建造限制：当建筑具有升级其他建筑的扩展属性时，
+	// 需要额外检查该建筑的建造数量限制
 	if (canBuild == CanBuildResult::Buildable)
 	{
+		// 检查建筑是否有升级其他建筑的扩展属性
 		if (auto const pBuilding = abstract_cast<BuildingTypeClass* const>(pItem))
 		{
 			if (BuildingTypeExt::ExtMap.Find(pBuilding)->PowersUp_Buildings.size() > 0)
@@ -102,6 +120,7 @@ DEFINE_HOOK(0x4F8361, HouseClass_CanBuild_UpgradesInteraction, 0x5)
 		}
 	}
 
+	// 全局建造限制检查：包含建造限制组检查及临时不可建造状态判断
 	if (canBuild == CanBuildResult::Buildable)
 	{
 		canBuild = HouseExt::BuildLimitGroupCheck(pThis, pItem, buildLimitOnly, includeInProduction);
@@ -110,9 +129,18 @@ DEFINE_HOOK(0x4F8361, HouseClass_CanBuild_UpgradesInteraction, 0x5)
 			canBuild = CanBuildResult::TemporarilyUnbuildable;
 	}
 
+	// 对玩家阵营的特殊处理：检查始终存在的图标状态
 	if (!buildLimitOnly && includeInProduction && pThis == HouseClass::CurrentPlayer) // Eliminate any non-producible calls
+	{
 		canBuild = TechnoTypeExt::CheckAlwaysExistCameo(pItem, canBuild);
+		
+	}
+	if (!buildLimitOnly && pThis == HouseClass::CurrentPlayer) // 检测额外属性建造前提
+	{
+		canBuild = TechnoTypeExt::ExtrasPrerequisite(pItem, canBuild);
 
+	}
+	
 	R->EAX(canBuild);
 	return 0;
 }

@@ -67,6 +67,7 @@ static void TransferMindControlOnDeploy(TechnoClass* pTechnoFrom, TechnoClass* p
 	}
 }
 
+//处理单位部署为建筑时的状态转移钩子函数
 DEFINE_HOOK(0x739956, UnitClass_Deploy_Transfer, 0x6)
 {
 	GET(UnitClass*, pUnit, EBP);
@@ -76,19 +77,23 @@ DEFINE_HOOK(0x739956, UnitClass_Deploy_Transfer, 0x6)
 	ShieldClass::SyncShieldToAnother(pUnit, pStructure);
 	TechnoExt::SyncInvulnerability(pUnit, pStructure);
 	AttachEffectClass::TransferAttachedEffects(pUnit, pStructure);
+	ExtrasClass::SyncExtrasToAnother(pUnit, pStructure);
 
 	return 0;
 }
 
+//用于在建筑类单位出售时转移特定状态到部署的单位上
 DEFINE_HOOK(0x44A03C, BuildingClass_Mi_Selling_Transfer, 0x6)
 {
 	GET(BuildingClass*, pStructure, EBP);
 	GET(UnitClass*, pUnit, EBX);
 
+	// 转移建筑到单位的关键状态信息
 	TransferMindControlOnDeploy(pStructure, pUnit);
 	ShieldClass::SyncShieldToAnother(pStructure, pUnit);
 	TechnoExt::SyncInvulnerability(pStructure, pUnit);
 	AttachEffectClass::TransferAttachedEffects(pStructure, pUnit);
+	ExtrasClass::SyncExtrasToAnother(pStructure, pUnit);
 
 	pUnit->QueueMission(Mission::Hunt, true);
 	//Why?

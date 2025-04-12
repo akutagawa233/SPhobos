@@ -27,6 +27,8 @@ public:
 		return this->Type;
 	};
 
+	static void SyncExtrasToAnother(TechnoClass* pFrom, TechnoClass* pTo);
+
 	bool Load(PhobosStreamReader& Stm, bool RegisterForChange);
 	bool Save(PhobosStreamWriter& Stm) const;
 private:
